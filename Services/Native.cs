@@ -30,6 +30,103 @@ internal static class Native
     [DllImport("user32.dll")]
     public static extern bool AllowSetForegroundWindow(int processId);
 
+    public const int GWL_EXSTYLE = -20;
+    public const long WS_EX_TOOLWINDOW = 0x80;
+    public const long WS_EX_NOACTIVATE = 0x08000000;
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    public static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    public static extern IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr value);
+
+    [DllImport("shell32.dll")]
+    static extern int SHQueryUserNotificationState(out int state);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct APPBARDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage;
+        public uint uEdge;
+        public RECT rc;
+        public IntPtr lParam;
+    }
+
+    [DllImport("shell32.dll")]
+    static extern UIntPtr SHAppBarMessage(uint message, ref APPBARDATA data);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern IntPtr FindWindow(string className, string? windowName);
+
+    /// <summary>Nascondi automaticamente la barra delle applicazioni di Windows.</summary>
+    public static bool TaskbarAutoHide
+    {
+        get
+        {
+            var data = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>() };
+            const uint ABM_GETSTATE = 4;
+            return ((ulong)SHAppBarMessage(ABM_GETSTATE, ref data) & 1) != 0;
+        }
+        set
+        {
+            const uint ABM_SETSTATE = 10;
+            const int ABS_AUTOHIDE = 1, ABS_ALWAYSONTOP = 2;
+            var data = new APPBARDATA
+            {
+                cbSize = Marshal.SizeOf<APPBARDATA>(),
+                hWnd = FindWindow("Shell_TrayWnd", null),
+                lParam = value ? ABS_AUTOHIDE : ABS_ALWAYSONTOP,
+            };
+            SHAppBarMessage(ABM_SETSTATE, ref data);
+        }
+    }
+
+    [DllImport("kernel32.dll")]
+    public static extern bool GetSystemTimes(out long idle, out long kernel, out long user);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile;
+        public ulong ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll")]
+    public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX status);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SHQUERYRBINFO
+    {
+        public int cbSize;
+        public long i64Size;
+        public long i64NumItems;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern int SHQueryRecycleBin(string? rootPath, ref SHQUERYRBINFO info);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint msg, IntPtr wParam, string lParam,
+        uint flags, uint timeout, out IntPtr result);
+
+    /// <summary>Avvisa tutte le finestre che un'impostazione è cambiata (es. "ImmersiveColorSet" per il tema).</summary>
+    public static void BroadcastSettingChange(string area)
+    {
+        const uint WM_SETTINGCHANGE = 0x1A, SMTO_ABORTIFHUNG = 0x2;
+        SendMessageTimeout((IntPtr)0xFFFF, WM_SETTINGCHANGE, IntPtr.Zero, area, SMTO_ABORTIFHUNG, 200, out _);
+    }
+
+    /// <summary>True con giochi, video o presentazioni a schermo intero.</summary>
+    public static bool IsFullscreenAppRunning() =>
+        SHQueryUserNotificationState(out int state) == 0 && state is 2 or 3 or 4;
+
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);
 

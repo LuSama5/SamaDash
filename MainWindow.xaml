@@ -13,34 +13,6 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <SolidColorBrush x:Key="Muted" Color="#9AA0A6" />
-        <SolidColorBrush x:Key="Accent" Color="#5B8CFF" />
-        <FontFamily x:Key="Glyphs">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
-
-        <Style x:Key="Flat" TargetType="Button">
-            <Setter Property="Foreground" Value="#F2F2F4" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#1FFFFFFF" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#33FFFFFF" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
@@ -193,6 +165,8 @@
                                 </Grid.ColumnDefinitions>
                                 <Image Source="{Binding Icon}" Width="24" Height="24" HorizontalAlignment="Left"
                                        RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource Glyphs}" FontSize="20"
+                                           Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="2,0,0,0" />
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Name}" FontSize="14" Foreground="#F2F2F4" TextTrimming="CharacterEllipsis" />
                                     <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="{StaticResource Muted}"
@@ -216,6 +190,96 @@
                 </WrapPanel>
                 <TextBlock x:Name="SuggestHint" Text="Sto imparando le tue abitudini: le app suggerite compariranno dopo un po' di utilizzo."
                            FontSize="11.5" Foreground="#6B7076" Margin="6,0,0,4" Visibility="Collapsed" />
+
+                <!-- Salute PC | Controlli -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="28" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="SALUTE PC" Style="{StaticResource SectionTitle}" />
+                        <StackPanel x:Name="HealthBars" Margin="6,0,0,0" />
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button x:Name="CleanupButton" Style="{StaticResource Flat}" Padding="10,6" Click="OnCleanupToggle">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE74D;" FontFamily="{StaticResource Glyphs}" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock Text="Libera spazio" FontSize="12" Margin="7,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource Flat}" Padding="10,6" Click="OnAdvancedCleanup"
+                                    ToolTip="Pulizia disco di Windows (file di sistema, aggiornamenti)">
+                                <TextBlock Text="Pulizia avanzata Windows" FontSize="12" Foreground="{StaticResource Muted}" />
+                            </Button>
+                        </StackPanel>
+                        <Border x:Name="CleanupPanel" Visibility="Collapsed" Background="#0FFFFFFF" CornerRadius="8"
+                                Padding="10,8" Margin="0,4,0,0">
+                            <StackPanel>
+                                <StackPanel x:Name="CleanupItems" />
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <Button x:Name="CleanButton" Style="{StaticResource Flat}" Padding="12,5" Click="OnClean"
+                                            Background="#335B8CFF">
+                                        <TextBlock x:Name="CleanButtonText" Text="Pulisci selezionati" FontSize="12" />
+                                    </Button>
+                                    <TextBlock x:Name="CleanupStatus" FontSize="11.5" Foreground="{StaticResource Muted}"
+                                               VerticalAlignment="Center" Margin="10,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="CONTROLLI" Style="{StaticResource SectionTitle}" />
+                        <!-- Uscita audio -->
+                        <Button x:Name="OutputButton" Style="{StaticResource Flat}" Padding="8,6" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left" Click="OnOutputClick" ToolTip="Cambia uscita audio">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE7F5;" FontFamily="{StaticResource Glyphs}" FontSize="14" VerticalAlignment="Center" />
+                                <TextBlock x:Name="OutputName" Grid.Column="1" FontSize="12.5" Margin="10,0" TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="&#xE70D;" FontFamily="{StaticResource Glyphs}" FontSize="10"
+                                           Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Button>
+                        <!-- Volume -->
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="44" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="MuteButton" Style="{StaticResource Flat}" Width="32" Height="30" Click="OnMuteClick" ToolTip="Muto">
+                                <TextBlock x:Name="MuteGlyph" Text="&#xE767;" FontFamily="{StaticResource Glyphs}" FontSize="14" />
+                            </Button>
+                            <Slider x:Name="VolumeSlider" Grid.Column="1" Minimum="0" Maximum="100" VerticalAlignment="Center"
+                                    Margin="6,0" IsMoveToPointEnabled="True" ValueChanged="OnVolumeChanged" />
+                            <TextBlock x:Name="VolumeText" Grid.Column="2" FontSize="12" Foreground="{StaticResource Muted}"
+                                       VerticalAlignment="Center" TextAlignment="Right" />
+                        </Grid>
+                        <!-- Tema e Non disturbare -->
+                        <WrapPanel Margin="0,6,0,0">
+                            <Button x:Name="ThemeButton" Style="{StaticResource Flat}" Padding="10,6" Margin="0,0,6,0" Click="OnThemeClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE706;" FontFamily="{StaticResource Glyphs}" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="ThemeText" FontSize="12" Margin="7,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="DndButton" Style="{StaticResource Flat}" Padding="10,6" Click="OnDndClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7ED;" FontFamily="{StaticResource Glyphs}" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock Text="Non disturbare" FontSize="12" Margin="7,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
 
                 <TextBlock Text="SHORTCUT  ·  trascina qui file, cartelle o link" Style="{StaticResource SectionTitle}" />
                 <ItemsControl x:Name="ShortcutList" ItemTemplate="{StaticResource Tile}" ItemsPanel="{StaticResource Wrap}" />

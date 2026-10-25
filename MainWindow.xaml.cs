@@ -15,6 +15,8 @@ namespace SamaDash;
 public partial class MainWindow : Window
 {
     public UsageTracker Tracker { get; } = new();
+    /// <summary>Completato quando l'elenco delle app del menu Start è pronto.</summary>
+    public Task AppsLoaded { get; }
 
     readonly AppIndex apps = new();
     readonly ShortcutStore shortcuts = new();
@@ -29,9 +31,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         ready = true;
-        _ = apps.LoadAsync();
+        AppsLoaded = apps.LoadAsync();
         shortcuts.Load();
+        WatchTaskbar();
         BuildSystemBar();
+        health.CpuUsage(); // prima lettura di riferimento
+        healthTimer.Tick += (_, _) => RefreshHealth();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -68,6 +73,9 @@ public partial class MainWindow : Window
         shortcuts.Load();
         RefreshShortcuts();
         _ = RefreshSuggestionsAsync();
+        RefreshHealth();
+        RefreshControls();
+        healthTimer.Start();
 
         Show();
         Activate();
@@ -84,6 +92,8 @@ public partial class MainWindow : Window
         if (!IsVisible) return;
         Hide();
         lastHidden = DateTime.Now;
+        healthTimer.Stop();
+        CleanupPanel.Visibility = Visibility.Collapsed;
         Pin.IsChecked = false;
         Query.Text = "";
     }
@@ -168,6 +178,9 @@ public partial class MainWindow : Window
     async Task RunSearchAsync(string query, CancellationToken token)
     {
         var entries = new List<Entry>();
+        if (filter == "" && await QuickAnswerAsync(query, token) is { } answer)
+            entries.Add(answer);
+
         if (filter is "" or "app")
             entries.AddRange(apps.Search(query).Take(filter == "app" ? 30 : 5).Select(a => AppToEntry(a, EntrySource.Result)));
 
@@ -180,11 +193,59 @@ public partial class MainWindow : Window
         }
         token.ThrowIfCancellationRequested();
 
+        if (filter == "")
+        {
+            if (LooksLikeSite(query))
+                entries.Add(WebEntry($"Apri {query}", query.StartsWith("http") ? query : "https://" + query));
+            entries.Add(WebEntry($"Cerca «{query}» su Google", "https://www.google.com/search?q=" + Uri.EscapeDataString(query)));
+        }
+
         Results.ItemsSource = entries;
         if (entries.Count > 0) Results.SelectedIndex = 0;
         Status.Text = error ?? (entries.Count == 0 ? "Nessun risultato" : "");
         Status.Visibility = Status.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    /// <summary>Risultato di un calcolo, di una conversione di unità o di valuta, o null.</summary>
+    static async Task<Entry?> QuickAnswerAsync(string query, CancellationToken token)
+    {
+        if (Calculator.TryEvaluate(query, out double value))
+            return CalcEntry(Calculator.Format(value), query);
+        if (Calculator.TryConvertUnits(query, out string converted))
+            return CalcEntry(converted, query);
+        if (await Currency.TryConvertAsync(query, token) is { } money)
+            return CalcEntry(money.Value, money.Detail);
+        return null;
+    }
+
+    static Entry CalcEntry(string result, string detail) => new()
+    {
+        Name = "= " + result,
+        Path = result,
+        Detail = $"{detail} · Invio per copiare",
+        Kind = EntryKind.Calc,
+        Source = EntrySource.Result,
+    };
+
+    static Entry WebEntry(string name, string url) => new()
+    {
+        Name = name,
+        Path = url,
+        Detail = url,
+        Kind = EntryKind.Web,
+        Source = EntrySource.Result,
+    };
+
+    /// <summary>"github.com", "www.polimi.it/servizi": parole senza spazi con un dominio.</summary>
+    static bool LooksLikeSite(string query) =>
+        !query.Contains(' ') && !query.Contains('\\') &&
+        System.Text.RegularExpressions.Regex.IsMatch(query, @"^(https?://)?[\w-]+(\.[\w-]+)*\.[a-z]{2,}(/\S*)?$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
+        !IsFileExtension(query); // "relazione.pdf" è un file, non un sito
+
+    static bool IsFileExtension(string query) =>
+        Path.GetExtension(query).ToLowerInvariant() is ".pdf" or ".docx" or ".doc" or ".xlsx" or ".pptx" or ".txt"
+            or ".jpg" or ".png" or ".zip" or ".exe" or ".mp4" or ".mp3" or ".cs" or ".json" or ".md";
 
     void OnResultClick(object sender, MouseButtonEventArgs e)
     {
@@ -206,15 +267,9 @@ public partial class MainWindow : Window
 
     async Task RefreshSuggestionsAsync()
     {
-        var (top, recent) = await Task.Run(() => (Tracker.Top(12), Shell.RecentFiles(3)));
-
-        var suggested = new List<Entry>();
-        foreach (var exe in top)
-        {
-            var entry = ExeToEntry(exe);
-            if (entry != null && !suggested.Any(s => s.Name == entry.Name)) suggested.Add(entry);
-            if (suggested.Count == 3) break;
-        }
+        var recentTask = Task.Run(() => Shell.RecentFiles(3));
+        var suggested = await SuggestedAppsAsync(3);
+        var recent = await recentTask;
 
         SuggestedApps.ItemsSource = suggested;
         RecentFiles.ItemsSource = recent.Select(p => FileEntry(p, EntrySource.Recent)).ToList();
@@ -222,18 +277,61 @@ public partial class MainWindow : Window
         SuggestHint.Visibility = suggested.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>Le app più probabili adesso, già pronte da mostrare (usata anche dalla mini barra).</summary>
+    public async Task<List<Entry>> SuggestedAppsAsync(int count)
+    {
+        var top = await Task.Run(() => Tracker.Top(count * 4));
+        var suggested = new List<Entry>();
+        foreach (var exe in top)
+        {
+            var entry = ExeToEntry(exe);
+            if (entry != null && !suggested.Any(s => s.Name == entry.Name)) suggested.Add(entry);
+            if (suggested.Count == count) break;
+        }
+        return suggested;
+    }
+
+    /// <summary>Scatta quando cambiano gli shortcut (aggiunti, rimossi o importati dalla taskbar).</summary>
+    public event Action? ShortcutsChanged;
+
     void RefreshShortcuts()
     {
-        var items = shortcuts.Items.Select(s => new Entry
-        {
-            Name = s.Name,
-            Path = s.Path,
-            Kind = KindOf(s.Path),
-            Source = EntrySource.Shortcut,
-            Exe = s.Path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? s.Path : null,
-        }).ToList();
+        var items = ShortcutEntries().ToList();
         items.Add(new Entry { Name = "Aggiungi", Path = "", Kind = EntryKind.Add, Source = EntrySource.Shortcut });
         ShortcutList.ItemsSource = items;
+        ShortcutsChanged?.Invoke();
+    }
+
+    IEnumerable<Entry> ShortcutEntries() => shortcuts.Items.Select(s => new Entry
+    {
+        Name = s.Name,
+        Path = s.Path,
+        Kind = ShortcutStore.IsApp(s.Path) ? EntryKind.App : KindOf(s.Path),
+        Source = EntrySource.Shortcut,
+        Exe = ShortcutStore.TargetOf(s.Path),
+    });
+
+    /// <summary>Gli shortcut che sono app (per la mini barra).</summary>
+    public List<Entry> AppShortcuts() => ShortcutEntries().Where(e => e.Kind == EntryKind.App).ToList();
+
+    FileSystemWatcher? taskbarWatcher;
+
+    /// <summary>Quando fissi un'app sulla taskbar viene aggiunta anche agli shortcut.</summary>
+    void WatchTaskbar()
+    {
+        if (shortcuts.SyncTaskbar()) RefreshShortcuts();
+        if (!Directory.Exists(ShortcutStore.TaskbarDir)) return;
+
+        var pending = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        pending.Tick += (_, _) =>
+        {
+            pending.Stop();
+            if (shortcuts.SyncTaskbar()) RefreshShortcuts();
+        };
+        taskbarWatcher = new FileSystemWatcher(ShortcutStore.TaskbarDir, "*.lnk") { EnableRaisingEvents = true };
+        FileSystemEventHandler changed = (_, _) => Dispatcher.BeginInvoke(() => { pending.Stop(); pending.Start(); });
+        taskbarWatcher.Created += changed;
+        taskbarWatcher.Renamed += (s, e) => changed(s, e);
     }
 
     void AddShortcut(string path)
@@ -352,11 +450,15 @@ public partial class MainWindow : Window
 
     // ---------- Apertura ----------
 
-    void Open(Entry entry, bool reveal = false)
+    public void Open(Entry entry, bool reveal = false)
     {
         try
         {
-            if (reveal)
+            if (entry.Kind == EntryKind.Calc)
+            {
+                Clipboard.SetText(entry.Path);
+            }
+            else if (reveal)
             {
                 Shell.Reveal(entry.Path);
             }
@@ -429,6 +531,212 @@ public partial class MainWindow : Window
         path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? EntryKind.Url
         : Directory.Exists(path) ? EntryKind.Folder
         : EntryKind.File;
+
+    // ---------- Salute PC ----------
+
+    readonly SystemHealth health = new();
+    readonly DispatcherTimer healthTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    DispatcherTimer? cleanArmed;
+
+    void RefreshHealth()
+    {
+        HealthBars.Children.Clear();
+        foreach (var disk in SystemHealth.Disks())
+            HealthBars.Children.Add(HealthRow($"Disco {disk.Name}", disk.UsedFraction,
+                $"{SystemHealth.FormatBytes(disk.FreeBytes)} liberi"));
+
+        var (ram, total) = SystemHealth.Memory();
+        HealthBars.Children.Add(HealthRow("RAM", ram, $"{ram:P0} di {SystemHealth.FormatBytes((long)total)}"));
+        double cpu = health.CpuUsage();
+        HealthBars.Children.Add(HealthRow("CPU", cpu, $"{cpu:P0}"));
+    }
+
+    /// <summary>Riga etichetta | barra | valore. La barra diventa rossa sopra il 90%.</summary>
+    static Grid HealthRow(string label, double fraction, string value)
+    {
+        fraction = Math.Clamp(fraction, 0, 1);
+        var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(112) });
+
+        var bar = new Grid { Height = 6, VerticalAlignment = VerticalAlignment.Center };
+        bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(fraction, GridUnitType.Star) });
+        bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1 - fraction, GridUnitType.Star) });
+        var track = new Border { Background = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(3) };
+        Grid.SetColumnSpan(track, 2);
+        var color = fraction > 0.9 ? Color.FromRgb(0xE5, 0x48, 0x4D)
+            : fraction > 0.75 ? Color.FromRgb(0xF0, 0xA0, 0x30)
+            : Color.FromRgb(0x5B, 0x8C, 0xFF);
+        var fill = new Border { Background = new SolidColorBrush(color), CornerRadius = new CornerRadius(3) };
+        bar.Children.Add(track);
+        bar.Children.Add(fill);
+
+        var name = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        var text = new TextBlock
+        {
+            Text = value, FontSize = 11.5, Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0xA0, 0xA6)),
+            TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(bar, 1);
+        Grid.SetColumn(text, 2);
+        row.Children.Add(name);
+        row.Children.Add(bar);
+        row.Children.Add(text);
+        return row;
+    }
+
+    async void OnCleanupToggle(object sender, RoutedEventArgs e)
+    {
+        if (CleanupPanel.Visibility == Visibility.Visible)
+        {
+            CleanupPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+        CleanupPanel.Visibility = Visibility.Visible;
+        CleanupStatus.Text = "";
+        await ScanCleanupAsync();
+    }
+
+    async Task ScanCleanupAsync()
+    {
+        CleanupItems.Children.Clear();
+        CleanupItems.Children.Add(new TextBlock { Text = "Analisi in corso…", FontSize = 12, Foreground = (Brush)FindResource("Muted") });
+        CleanButton.IsEnabled = false;
+
+        var items = await Task.Run(SystemHealth.Scan);
+        CleanupItems.Children.Clear();
+        foreach (var item in items)
+        {
+            var label = $"{item.Label} — {SystemHealth.FormatBytes(item.Bytes)}" + (item.Disabled != null ? $" ({item.Disabled})" : "");
+            CleanupItems.Children.Add(new CheckBox
+            {
+                Content = label,
+                Tag = item.Key,
+                IsChecked = item.Disabled == null && item.Bytes > 0,
+                IsEnabled = item.Disabled == null && item.Bytes > 0,
+                Foreground = Brushes.White,
+                FontSize = 12,
+                Margin = new Thickness(0, 2, 0, 2),
+            });
+        }
+        long total = items.Where(i => i.Disabled == null).Sum(i => i.Bytes);
+        CleanupStatus.Text = $"Recuperabili: {SystemHealth.FormatBytes(total)}";
+        CleanButton.IsEnabled = total > 0;
+    }
+
+    /// <summary>Primo clic: chiede conferma. Secondo clic entro 3 secondi: pulisce.</summary>
+    async void OnClean(object sender, RoutedEventArgs e)
+    {
+        if (cleanArmed == null)
+        {
+            CleanButtonText.Text = "Conferma?";
+            CleanButton.Background = new SolidColorBrush(Color.FromArgb(0x66, 0xE5, 0x48, 0x4D));
+            cleanArmed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            cleanArmed.Tick += (_, _) => ResetCleanButton();
+            cleanArmed.Start();
+            return;
+        }
+        ResetCleanButton();
+
+        var keys = CleanupItems.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (string)c.Tag).ToList();
+        CleanButton.IsEnabled = false;
+        CleanupStatus.Text = "Pulizia in corso…";
+        var hwnd = new WindowInteropHelper(this).Handle;
+        long freed = await Task.Run(() => SystemHealth.Clean(keys, hwnd));
+        RefreshHealth();
+        await ScanCleanupAsync();
+        CleanupStatus.Text = $"Liberati {SystemHealth.FormatBytes(freed)}";
+    }
+
+    void ResetCleanButton()
+    {
+        cleanArmed?.Stop();
+        cleanArmed = null;
+        CleanButtonText.Text = "Pulisci selezionati";
+        CleanButton.Background = new SolidColorBrush(Color.FromArgb(0x33, 0x5B, 0x8C, 0xFF));
+    }
+
+    void OnAdvancedCleanup(object sender, RoutedEventArgs e)
+    {
+        HideBar();
+        Shell.Open("cleanmgr.exe");
+    }
+
+    // ---------- Controlli rapidi ----------
+
+    bool updatingControls;
+
+    void RefreshControls()
+    {
+        updatingControls = true;
+        var outputs = AudioDevices.Outputs();
+        OutputName.Text = outputs.FirstOrDefault(o => o.IsDefault)?.Name ?? "Nessuna uscita audio";
+        double volume = Math.Round(AudioDevices.Volume * 100);
+        VolumeSlider.Value = volume;
+        VolumeText.Text = $"{volume:0}%";
+        MuteGlyph.Text = AudioDevices.Muted ? "" : "";
+
+        bool dark = QuickSettings.DarkMode;
+        ThemeText.Text = dark ? "Tema scuro" : "Tema chiaro";
+        SetActive(ThemeButton, dark);
+        SetActive(DndButton, QuickSettings.DoNotDisturb);
+        updatingControls = false;
+    }
+
+    static void SetActive(Button button, bool active)
+    {
+        if (active) button.Background = new SolidColorBrush(Color.FromArgb(0x40, 0x5B, 0x8C, 0xFF));
+        else button.ClearValue(BackgroundProperty);
+    }
+
+    void OnOutputClick(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = OutputButton };
+        foreach (var output in AudioDevices.Outputs())
+        {
+            var item = AddItem(menu, output.Name, () =>
+            {
+                try { AudioDevices.SetDefault(output.Id); }
+                catch (Exception ex) { ShowError($"Impossibile cambiare uscita audio: {ex.Message}"); }
+                RefreshControls();
+            });
+            item.IsChecked = output.IsDefault;
+        }
+        if (menu.Items.Count == 0) AddItem(menu, "Nessuna uscita audio attiva", () => { }).IsEnabled = false;
+        menu.IsOpen = true;
+    }
+
+    void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!ready) return;
+        VolumeText.Text = $"{e.NewValue:0}%";
+        if (updatingControls) return;
+        AudioDevices.Volume = (float)(e.NewValue / 100);
+        if (AudioDevices.Muted && e.NewValue > 0)
+        {
+            AudioDevices.Muted = false;
+            MuteGlyph.Text = "";
+        }
+    }
+
+    void OnMuteClick(object sender, RoutedEventArgs e)
+    {
+        AudioDevices.Muted = !AudioDevices.Muted;
+        RefreshControls();
+    }
+
+    void OnThemeClick(object sender, RoutedEventArgs e)
+    {
+        QuickSettings.DarkMode = !QuickSettings.DarkMode;
+        RefreshControls();
+    }
+
+    void OnDndClick(object sender, RoutedEventArgs e)
+    {
+        QuickSettings.DoNotDisturb = !QuickSettings.DoNotDisturb;
+        RefreshControls();
+    }
 
     // ---------- Azioni di sistema ----------
 
