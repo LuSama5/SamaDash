@@ -1,0 +1,31 @@
+<Window x:Class="SamaDash.HotkeyDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Scorciatoia SamaDash" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" Topmost="True" ShowInTaskbar="False" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen" FontFamily="Segoe UI Variable Text, Segoe UI" Foreground="#F2F2F4"
+        PreviewKeyDown="OnKeyDown">
+    <Border CornerRadius="14" Background="#F2141418" BorderBrush="#30FFFFFF" BorderThickness="1" Padding="24,20" Margin="16">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="3" Direction="270" Opacity="0.5" />
+        </Border.Effect>
+        <StackPanel Width="340">
+            <TextBlock Text="Scorciatoia per aprire la dashboard" FontSize="15" FontWeight="SemiBold" />
+            <TextBlock Text="Premi la nuova combinazione di tasti (es. Alt+Spazio, Ctrl+Maiusc+D, F12)."
+                       FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,14" />
+            <Border Background="#14FFFFFF" CornerRadius="8" Padding="12,10">
+                <TextBlock x:Name="ComboText" FontSize="20" HorizontalAlignment="Center" />
+            </Border>
+            <TextBlock x:Name="Message" FontSize="12" Foreground="#F0A030" TextWrapping="Wrap" Margin="0,8,0,0"
+                       Visibility="Collapsed" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Style="{StaticResource Flat}" Padding="12,6" Click="OnDisable">
+                    <TextBlock Text="Disattiva" FontSize="12" Foreground="{StaticResource Muted}" />
+                </Button>
+                <Button Style="{StaticResource Flat}" Padding="12,6" Margin="6,0,0,0" Click="OnCancel">
+                    <TextBlock Text="Annulla (Esc)" FontSize="12" />
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

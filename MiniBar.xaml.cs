@@ -29,9 +29,12 @@ public partial class MiniBar : Window
 
         dashboard.IsVisibleChanged += (_, _) => UpdateVisibility();
         dashboard.ShortcutsChanged += () => _ = RefreshAppsAsync();
+        defaultCover = MusicCover.Background;
+        Media.Changed += () => Dispatcher.BeginInvoke(() => _ = RefreshMediaAsync());
         visibilityTimer.Tick += (_, _) =>
         {
             UpdateVisibility();
+            _ = RefreshMediaAsync();
             if (DateTime.Now - lastRefresh > TimeSpan.FromMinutes(5)) _ = RefreshAppsAsync();
         };
         SizeChanged += (_, _) => Place();
@@ -130,6 +133,41 @@ public partial class MiniBar : Window
         Card.BeginAnimation(OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(150)));
 
     void OnOpenDashboard(object sender, RoutedEventArgs e) => dashboard.ShowBar();
+
+    void OnOpenDisplays(object sender, RoutedEventArgs e) => dashboard.ShowDisplays();
+
+    // ---------- In riproduzione ----------
+
+    bool refreshingMedia;
+
+    async Task RefreshMediaAsync()
+    {
+        if (refreshingMedia || !IsVisible) return;
+        refreshingMedia = true;
+        try
+        {
+            var now = await Media.CurrentAsync();
+            MusicPanel.Visibility = now == null ? Visibility.Collapsed : Visibility.Visible;
+            if (now == null) return;
+            MusicTitle.Text = now.Title;
+            MusicArtist.Text = now.Artist.Length > 0 ? now.Artist : now.App;
+            MusicPlayGlyph.Text = now.Playing ? "" : "";
+            MusicNext.IsEnabled = now.CanNext;
+            MusicNext.Opacity = now.CanNext ? 1 : 0.35;
+            MusicCover.Background = now.Cover != null
+                ? new ImageBrush(now.Cover) { Stretch = Stretch.UniformToFill }
+                : defaultCover;
+        }
+        finally
+        {
+            refreshingMedia = false;
+        }
+    }
+
+    Brush? defaultCover;
+
+    async void OnMusicPlayPause(object sender, RoutedEventArgs e) { await Media.PlayPauseAsync(); await RefreshMediaAsync(); }
+    async void OnMusicNext(object sender, RoutedEventArgs e) { await Media.NextAsync(); await RefreshMediaAsync(); }
 
     void OnAppClick(object sender, RoutedEventArgs e)
     {

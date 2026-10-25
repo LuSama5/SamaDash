@@ -9,7 +9,9 @@ Dashboard a scomparsa in alto sullo schermo per Windows 11. Si apre e si chiude 
 - **Calcoli nella ricerca**: `15*3`, `10 km in mi`, `20 eur in usd` (tassi BCE); in fondo ai risultati "Cerca su Google"
 - **Salute PC**: barre per disco, RAM e CPU; "Libera spazio" per Temp, Cestino e cache dei browser, con anteprima dei GB recuperabili
 - **Controlli rapidi**: uscita audio, volume e muto, tema chiaro/scuro, Non disturbare
-- **Mini barra** sempre visibile, spostabile ovunque, con le app fissate sulla taskbar (sincronizzate) e le suggerite
+- **Schermi** (scheda dedicata): per ogni monitor collegato luminosità e contrasto via DDC/CI, luminosità WMI sui portatili, oppure oscuramento software se lo schermo non accetta comandi; HDR on/off, frequenza di aggiornamento, modalità di proiezione (come Win+P), Luce notturna. Tutto rilevato in automatico
+- **In riproduzione**: brano, copertina e controlli di qualsiasi app che usa i controlli multimediali di Windows (Spotify, browser, lettori), con scelta della fonte se ce n'è più d'una
+- **Mini barra** sempre visibile, spostabile ovunque, con le app fissate sulla taskbar (sincronizzate), le suggerite, il brano in riproduzione e l'accesso rapido agli schermi
 
 ## Test
 ```powershell
@@ -17,7 +19,7 @@ dotnet test SamaDash.Tests
 ```
 
 ## Requisiti
-- Windows 11, .NET 10 SDK
+- Windows 11 (Windows 10 2004+ per la maggior parte delle funzioni), .NET 10 SDK
 - Everything: `winget install voidtools.Everything` e `winget install voidtools.Everything.Cli`
 
 ## Installazione
@@ -29,7 +31,7 @@ Compila il progetto, lo installa in `%LOCALAPPDATA%\Programs\SamaDash`, crea il 
 ## Uso
 | Azione | Come |
 |---|---|
-| Aprire/chiudere | clic sull'icona nella tray (o avvia SamaDash dal menu Start) |
+| Aprire/chiudere | Alt+Spazio (modificabile), clic sull'icona nella tray o SamaDash dal menu Start |
 | Aprire il risultato | Invio o clic |
 | Aprire la cartella del file | Ctrl+Invio |
 | Altre opzioni | tasto destro su un elemento |
@@ -39,5 +41,14 @@ Compila il progetto, lo installa in `%LOCALAPPDATA%\Programs\SamaDash`, crea il 
 ## Dati
 I dati restano solo su questo PC, in `%LOCALAPPDATA%\SamaDash`:
 - `shortcuts.json`: gli shortcut, modificabili anche a mano
+- `settings.json`: impostazioni (scorciatoia, posizione della mini barra, oscuramento software per schermo)
 - `usage.json`: le abitudini d'uso, cioè i secondi in primo piano per app, divisi per giorno e ora
 - `errors.log`: gli eventuali errori
+
+## Note
+- L'interfaccia è in italiano.
+- DDC/CI va attivato nel menu del monitor su alcuni modelli; se non risponde, SamaDash usa l'oscuramento software.
+- Il design dell'interfaccia è su Figma (file "SamaDash – Schermi").
+
+## Licenza
+[MIT](LICENSE)

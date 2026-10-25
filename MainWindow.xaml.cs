@@ -37,6 +37,7 @@ public partial class MainWindow : Window
         BuildSystemBar();
         health.CpuUsage(); // prima lettura di riferimento
         healthTimer.Tick += (_, _) => RefreshHealth();
+        InitMedia();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -52,6 +53,68 @@ public partial class MainWindow : Window
         Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_SYSTEMBACKDROP_TYPE, ref acrylic, sizeof(int));
         var margins = new Native.MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
         Native.DwmExtendFrameIntoClientArea(hwnd, ref margins);
+
+        hotKey = new GlobalHotKey(hwnd);
+        HwndSource.FromHwnd(hwnd)!.AddHook(WndProc);
+        var combo = HotKeyCombo.Parse(Settings.Current.Hotkey);
+        HotkeyConflict = combo != null && !hotKey.Register(combo);
+        UpdateHotkeyText();
+    }
+
+    IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (GlobalHotKey.IsOurs(msg, wParam))
+        {
+            Toggle();
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    // ---------- Scorciatoia da tastiera ----------
+
+    GlobalHotKey? hotKey;
+
+    /// <summary>True se all'avvio la scorciatoia salvata era già usata da un'altra app.</summary>
+    public bool HotkeyConflict { get; private set; }
+
+    /// <summary>Scorciatoia attiva da mostrare (es. "Alt+Spazio"), o null se disattivata.</summary>
+    public string? HotkeyDisplay => hotKey?.Current?.Display;
+
+    public event Action? HotkeyChanged;
+
+    void OnHotkeyClick(object sender, RoutedEventArgs e) => EditHotkey();
+
+    public void EditHotkey()
+    {
+        if (hotKey == null) return;
+        var previous = hotKey.Current;
+        hotKey.Unregister(); // così la combinazione attuale arriva al dialogo invece di aprire la dashboard
+        bool changed = false;
+
+        var dialog = new HotkeyDialog(previous, combo =>
+        {
+            if (combo != null && !hotKey.Register(combo)) return false;
+            Settings.Current.Hotkey = combo?.ToString() ?? "";
+            Settings.Current.Save();
+            changed = true;
+            return true;
+        });
+        if (IsVisible) dialog.Owner = this;
+        RunDialog(() => dialog.ShowDialog());
+
+        if (!changed && previous != null) hotKey.Register(previous);
+        HotkeyConflict = false;
+        UpdateHotkeyText();
+        HotkeyChanged?.Invoke();
+    }
+
+    void UpdateHotkeyText()
+    {
+        HotkeyText.Text = HotkeyDisplay ?? "";
+        HotkeyButton.ToolTip = HotkeyDisplay != null
+            ? $"Scorciatoia per aprire la dashboard: {HotkeyDisplay} (clic per cambiarla)"
+            : "Imposta una scorciatoia da tastiera per aprire la dashboard";
     }
 
     // ---------- Mostra / nascondi ----------
@@ -76,6 +139,8 @@ public partial class MainWindow : Window
         RefreshHealth();
         RefreshControls();
         healthTimer.Start();
+        StartMedia();
+        if (DisplaysTab.IsChecked == true) _ = RefreshDisplaysAsync();
 
         Show();
         Activate();
@@ -93,6 +158,8 @@ public partial class MainWindow : Window
         Hide();
         lastHidden = DateTime.Now;
         healthTimer.Stop();
+        mediaTimer.Stop();
+        HomeTab.IsChecked = true;
         CleanupPanel.Visibility = Visibility.Collapsed;
         Pin.IsChecked = false;
         Query.Text = "";
@@ -159,7 +226,7 @@ public partial class MainWindow : Window
 
         bool searching = query.Length > 0;
         ResultsPanel.Visibility = searching ? Visibility.Visible : Visibility.Collapsed;
-        HomePanel.Visibility = searching ? Visibility.Collapsed : Visibility.Visible;
+        UpdatePanels(searching);
         if (!searching)
         {
             Results.ItemsSource = null;
@@ -236,7 +303,7 @@ public partial class MainWindow : Window
         Source = EntrySource.Result,
     };
 
-    /// <summary>"github.com", "www.polimi.it/servizi": parole senza spazi con un dominio.</summary>
+    /// <summary>"github.com", "www.example.org/pagina": parole senza spazi con un dominio.</summary>
     static bool LooksLikeSite(string query) =>
         !query.Contains(' ') && !query.Contains('\\') &&
         System.Text.RegularExpressions.Regex.IsMatch(query, @"^(https?://)?[\w-]+(\.[\w-]+)*\.[a-z]{2,}(/\S*)?$",

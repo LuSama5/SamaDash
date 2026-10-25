@@ -38,6 +38,7 @@ public partial class App : Application
 
         miniBar = new MiniBar(window);
         miniBar.Start();
+        Dimmer.Start(); // riapplica l'oscuramento software salvato
 
         tray = new WinForms.NotifyIcon
         {
@@ -64,7 +65,17 @@ public partial class App : Application
         {
             Autostart.Set(true); // aggiorna il percorso se l'exe è stato spostato
         }
+
+        UpdateTrayText();
+        window.HotkeyChanged += UpdateTrayText;
+        if (window.HotkeyConflict)
+            tray.ShowBalloonTip(5000, "Scorciatoia non disponibile",
+                $"{HotKeyCombo.Parse(settings.Hotkey)?.Display} è già usata da un'altra app. Scegline un'altra dal menu di questa icona.",
+                WinForms.ToolTipIcon.Warning);
     }
+
+    void UpdateTrayText() =>
+        tray!.Text = window!.HotkeyDisplay is { } hotkey ? $"SamaDash ({hotkey})" : "SamaDash";
 
     static void Log(Exception ex)
     {
@@ -93,6 +104,8 @@ public partial class App : Application
     {
         var menu = new WinForms.ContextMenuStrip();
         menu.Items.Add("Mostra dashboard", null, (_, _) => window!.ShowBar());
+        menu.Items.Add("Schermi (luminosità, HDR)", null, (_, _) => window!.ShowDisplays());
+        menu.Items.Add("Scorciatoia da tastiera…", null, (_, _) => window!.EditHotkey());
         menu.Items.Add("Modifica shortcut (JSON)", null, (_, _) => Shell.Open(Storage.PathOf(ShortcutStore.FileName)));
         menu.Items.Add("Apri cartella dati", null, (_, _) => Shell.Open(Storage.Dir));
 
