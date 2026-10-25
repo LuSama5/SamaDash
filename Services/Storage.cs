@@ -40,8 +40,11 @@ public class Settings
 {
     public bool FirstRunDone { get; set; }
     public bool MiniBarEnabled { get; set; } = true;
-    /// <summary>Posizione orizzontale della mini barra; null = centrata.</summary>
+    /// <summary>Posizione della mini barra; null = in alto al centro.</summary>
     public double? MiniBarLeft { get; set; }
+    public double? MiniBarTop { get; set; }
+    /// <summary>App fissate sulla taskbar già importate negli shortcut (non vengono riaggiunte se le rimuovi).</summary>
+    public List<string> ImportedPins { get; set; } = [];
 
     public static Settings Current { get; } = Storage.Load<Settings>("settings.json") ?? new Settings();
 

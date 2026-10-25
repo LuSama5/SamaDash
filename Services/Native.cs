@@ -43,6 +43,49 @@ internal static class Native
     [DllImport("shell32.dll")]
     static extern int SHQueryUserNotificationState(out int state);
 
+    [StructLayout(LayoutKind.Sequential)]
+    struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct APPBARDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage;
+        public uint uEdge;
+        public RECT rc;
+        public IntPtr lParam;
+    }
+
+    [DllImport("shell32.dll")]
+    static extern UIntPtr SHAppBarMessage(uint message, ref APPBARDATA data);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern IntPtr FindWindow(string className, string? windowName);
+
+    /// <summary>Nascondi automaticamente la barra delle applicazioni di Windows.</summary>
+    public static bool TaskbarAutoHide
+    {
+        get
+        {
+            var data = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>() };
+            const uint ABM_GETSTATE = 4;
+            return ((ulong)SHAppBarMessage(ABM_GETSTATE, ref data) & 1) != 0;
+        }
+        set
+        {
+            const uint ABM_SETSTATE = 10;
+            const int ABS_AUTOHIDE = 1, ABS_ALWAYSONTOP = 2;
+            var data = new APPBARDATA
+            {
+                cbSize = Marshal.SizeOf<APPBARDATA>(),
+                hWnd = FindWindow("Shell_TrayWnd", null),
+                lParam = value ? ABS_AUTOHIDE : ABS_ALWAYSONTOP,
+            };
+            SHAppBarMessage(ABM_SETSTATE, ref data);
+        }
+    }
+
     /// <summary>True con giochi, video o presentazioni a schermo intero.</summary>
     public static bool IsFullscreenAppRunning() =>
         SHQueryUserNotificationState(out int state) == 0 && state is 2 or 3 or 4;

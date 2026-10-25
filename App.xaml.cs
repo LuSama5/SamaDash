@@ -96,15 +96,25 @@ public partial class App : Application
         menu.Items.Add("Modifica shortcut (JSON)", null, (_, _) => Shell.Open(Storage.PathOf(ShortcutStore.FileName)));
         menu.Items.Add("Apri cartella dati", null, (_, _) => Shell.Open(Storage.Dir));
 
-        var mini = new WinForms.ToolStripMenuItem("Mini barra in alto") { CheckOnClick = true };
+        var mini = new WinForms.ToolStripMenuItem("Mini barra") { CheckOnClick = true };
         mini.Click += (_, _) => miniBar!.Enabled = mini.Checked;
         menu.Items.Add(mini);
+        menu.Items.Add("Riporta la mini barra in alto", null, (_, _) => miniBar!.ResetPosition());
+
+        var autoHide = new WinForms.ToolStripMenuItem("Barra di Windows a scomparsa") { CheckOnClick = true };
+        autoHide.Click += (_, _) =>
+        {
+            Native.TaskbarAutoHide = autoHide.Checked;
+            miniBar!.UpdateTaskbarButton();
+        };
+        menu.Items.Add(autoHide);
 
         var autostart = new WinForms.ToolStripMenuItem("Avvio con Windows") { CheckOnClick = true };
         menu.Opening += (_, _) =>
         {
             autostart.Checked = Autostart.IsEnabled;
             mini.Checked = miniBar!.Enabled;
+            autoHide.Checked = Native.TaskbarAutoHide;
         };
         autostart.Click += (_, _) => Autostart.Set(autostart.Checked);
         menu.Items.Add(autostart);

@@ -33,6 +33,7 @@ public partial class MainWindow : Window
         ready = true;
         AppsLoaded = apps.LoadAsync();
         shortcuts.Load();
+        WatchTaskbar();
         BuildSystemBar();
     }
 
@@ -232,18 +233,47 @@ public partial class MainWindow : Window
         return suggested;
     }
 
+    /// <summary>Scatta quando cambiano gli shortcut (aggiunti, rimossi o importati dalla taskbar).</summary>
+    public event Action? ShortcutsChanged;
+
     void RefreshShortcuts()
     {
-        var items = shortcuts.Items.Select(s => new Entry
-        {
-            Name = s.Name,
-            Path = s.Path,
-            Kind = KindOf(s.Path),
-            Source = EntrySource.Shortcut,
-            Exe = s.Path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? s.Path : null,
-        }).ToList();
+        var items = ShortcutEntries().ToList();
         items.Add(new Entry { Name = "Aggiungi", Path = "", Kind = EntryKind.Add, Source = EntrySource.Shortcut });
         ShortcutList.ItemsSource = items;
+        ShortcutsChanged?.Invoke();
+    }
+
+    IEnumerable<Entry> ShortcutEntries() => shortcuts.Items.Select(s => new Entry
+    {
+        Name = s.Name,
+        Path = s.Path,
+        Kind = ShortcutStore.IsApp(s.Path) ? EntryKind.App : KindOf(s.Path),
+        Source = EntrySource.Shortcut,
+        Exe = ShortcutStore.TargetOf(s.Path),
+    });
+
+    /// <summary>Gli shortcut che sono app (per la mini barra).</summary>
+    public List<Entry> AppShortcuts() => ShortcutEntries().Where(e => e.Kind == EntryKind.App).ToList();
+
+    FileSystemWatcher? taskbarWatcher;
+
+    /// <summary>Quando fissi un'app sulla taskbar viene aggiunta anche agli shortcut.</summary>
+    void WatchTaskbar()
+    {
+        if (shortcuts.SyncTaskbar()) RefreshShortcuts();
+        if (!Directory.Exists(ShortcutStore.TaskbarDir)) return;
+
+        var pending = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        pending.Tick += (_, _) =>
+        {
+            pending.Stop();
+            if (shortcuts.SyncTaskbar()) RefreshShortcuts();
+        };
+        taskbarWatcher = new FileSystemWatcher(ShortcutStore.TaskbarDir, "*.lnk") { EnableRaisingEvents = true };
+        FileSystemEventHandler changed = (_, _) => Dispatcher.BeginInvoke(() => { pending.Stop(); pending.Start(); });
+        taskbarWatcher.Created += changed;
+        taskbarWatcher.Renamed += (s, e) => changed(s, e);
     }
 
     void AddShortcut(string path)
