@@ -7,16 +7,16 @@ namespace SamaDash.Services;
 /// <summary>Ricerca file tramite es.exe (Everything CLI).</summary>
 public static class EverythingSearch
 {
-    const string EverythingExe = @"C:\Program Files\Everything\Everything.exe";
-
     // Cartelle che riempiono i risultati di file inutili
     static readonly string[] Excludes =
     [
-        @"!C:\Windows\", @"!\AppData\", @"!\$Recycle.Bin\", @"!C:\ProgramData\",
-        @"!\node_modules\", @"!\.git\", @"!\.cache\",
+        $@"!{Environment.GetFolderPath(Environment.SpecialFolder.Windows)}\",
+        $@"!{Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}\",
+        @"!\AppData\", @"!\$Recycle.Bin\", @"!\node_modules\", @"!\.git\", @"!\.cache\",
     ];
 
     static readonly string? EsPath = FindEs();
+    static readonly string? EverythingExe = FindEverything();
 
     public static async Task<(List<string> Paths, string? Error)> SearchAsync(
         string query, string filter, int max, CancellationToken token)
@@ -24,7 +24,7 @@ public static class EverythingSearch
         if (EsPath == null) return ([], "es.exe non trovato: installa voidtools.Everything.Cli");
 
         var result = await RunAsync(query, filter, max, token);
-        if (result.ExitCode == 8 && File.Exists(EverythingExe))
+        if (result.ExitCode == 8 && EverythingExe != null)
         {
             // Everything non è aperto: lo avvio in background e riprovo
             Process.Start(EverythingExe, "-startup");
@@ -75,7 +75,7 @@ public static class EverythingSearch
             .Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Select(dir => Path.Combine(dir, "es.exe"))
             .Append(Path.Combine(local, @"Microsoft\WinGet\Links\es.exe"))
-            .Append(@"C:\Program Files\Everything\es.exe");
+            .Concat(EverythingDirs().Select(dir => Path.Combine(dir, "es.exe")));
         foreach (var path in candidates)
             if (File.Exists(path)) return path;
 
@@ -90,5 +90,27 @@ public static class EverythingSearch
         {
             return null;
         }
+    }
+
+    /// <summary>Cartelle in cui di solito si trova Everything (installer, Scoop).</summary>
+    static IEnumerable<string> EverythingDirs()
+    {
+        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Everything");
+        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Everything");
+        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"scoop\apps\everything\current");
+    }
+
+    static string? FindEverything()
+    {
+        // l'installer registra la cartella tra i programmi installati
+        foreach (var hive in new[] { Microsoft.Win32.Registry.LocalMachine, Microsoft.Win32.Registry.CurrentUser })
+        {
+            using var key = hive.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Everything");
+            if (key?.GetValue("InstallLocation") is string dir && File.Exists(Path.Combine(dir, "Everything.exe")))
+                return Path.Combine(dir, "Everything.exe");
+        }
+        var dirs = EverythingDirs();
+        if (EsPath != null) dirs = dirs.Prepend(Path.GetDirectoryName(EsPath)!);
+        return dirs.Select(dir => Path.Combine(dir, "Everything.exe")).FirstOrDefault(File.Exists);
     }
 }

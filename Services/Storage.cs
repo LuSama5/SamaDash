@@ -47,6 +47,8 @@ public class Settings
     public double? MiniBarTop { get; set; }
     /// <summary>App fissate sulla taskbar già importate negli shortcut (non vengono riaggiunte se le rimuovi).</summary>
     public List<string> ImportedPins { get; set; } = [];
+    /// <summary>Oscuramento software (0-100) per gli schermi senza DDC/CI, per percorso del dispositivo.</summary>
+    public Dictionary<string, int> SoftwareBrightness { get; set; } = [];
 
     public static Settings Current { get; } = Storage.Load<Settings>("settings.json") ?? new Settings();
 

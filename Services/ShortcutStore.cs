@@ -44,9 +44,10 @@ public class ShortcutStore
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         @"Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar");
 
-    // già presenti tra le azioni di sistema
-    static readonly HashSet<string> SkippedPins = new(StringComparer.OrdinalIgnoreCase)
-        { "Gestione attività", "Task Manager", "Impostazioni", "Settings" };
+    // già presenti tra le azioni di sistema: le riconosco dall'exe o dall'ID dell'app,
+    // così funziona con Windows in qualsiasi lingua
+    static readonly string[] SkippedTargets = ["taskmgr.exe", "SystemSettings.exe"];
+    const string SettingsAppId = "windows.immersivecontrolpanel";
 
     /// <summary>
     /// Aggiunge le app appena fissate sulla taskbar, senza duplicati.
@@ -66,8 +67,7 @@ public class ShortcutStore
 
             var name = NameFor(lnk);
             var target = TargetOf(lnk);
-            if (SkippedPins.Contains(name) || target?.EndsWith("taskmgr.exe", StringComparison.OrdinalIgnoreCase) == true)
-                continue;
+            if (IsSystemPin(lnk, target)) continue;
             if (Items.Any(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase) ||
                                (target != null && target.Equals(TargetOf(s.Path), StringComparison.OrdinalIgnoreCase))))
                 continue;
@@ -79,6 +79,22 @@ public class ShortcutStore
         if (seen) Settings.Current.Save();
         if (added) Storage.Save(FileName, Items);
         return added;
+    }
+
+    static bool IsSystemPin(string lnk, string? target)
+    {
+        if (target != null && SkippedTargets.Any(t => target.EndsWith(t, StringComparison.OrdinalIgnoreCase)))
+            return true;
+        // le app di sistema fissate non hanno un exe: l'ID dell'app è salvato nel .lnk in UTF-16
+        try
+        {
+            return System.Text.Encoding.Unicode.GetString(File.ReadAllBytes(lnk))
+                .Contains(SettingsAppId, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>Exe a cui punta il percorso (risolve i .lnk), o null.</summary>
@@ -119,7 +135,9 @@ public class ShortcutStore
             ("Download", System.IO.Path.Combine(home, "Downloads")),
             ("Documenti", documents),
             ("OneDrive", Environment.GetEnvironmentVariable("OneDriveConsumer") ?? System.IO.Path.Combine(home, "OneDrive")),
-            ("OneDrive Polimi", Environment.GetEnvironmentVariable("OneDriveCommercial")),
+            // OneDrive di lavoro/scuola: la cartella ha già il nome giusto ("OneDrive - Organizzazione")
+            (System.IO.Path.GetFileName(Environment.GetEnvironmentVariable("OneDriveCommercial") ?? ""),
+                Environment.GetEnvironmentVariable("OneDriveCommercial")),
             ("GitHub", System.IO.Path.Combine(documents, "GitHub")),
         };
         return candidates

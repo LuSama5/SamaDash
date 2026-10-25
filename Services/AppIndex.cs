@@ -70,6 +70,9 @@ public class AppIndex
         return apps.FirstOrDefault(a => a.Aumid?.StartsWith(family, StringComparison.OrdinalIgnoreCase) == true);
     }
 
+    public string? NameForAumid(string aumid) =>
+        apps.FirstOrDefault(a => string.Equals(a.Aumid, aumid, StringComparison.OrdinalIgnoreCase))?.Name;
+
     static int Score(string name, string query)
     {
         int i = name.IndexOf(query, StringComparison.OrdinalIgnoreCase);

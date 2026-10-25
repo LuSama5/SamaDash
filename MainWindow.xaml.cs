@@ -37,6 +37,7 @@ public partial class MainWindow : Window
         BuildSystemBar();
         health.CpuUsage(); // prima lettura di riferimento
         healthTimer.Tick += (_, _) => RefreshHealth();
+        InitMedia();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -138,6 +139,8 @@ public partial class MainWindow : Window
         RefreshHealth();
         RefreshControls();
         healthTimer.Start();
+        StartMedia();
+        if (DisplaysTab.IsChecked == true) _ = RefreshDisplaysAsync();
 
         Show();
         Activate();
@@ -155,6 +158,8 @@ public partial class MainWindow : Window
         Hide();
         lastHidden = DateTime.Now;
         healthTimer.Stop();
+        mediaTimer.Stop();
+        HomeTab.IsChecked = true;
         CleanupPanel.Visibility = Visibility.Collapsed;
         Pin.IsChecked = false;
         Query.Text = "";
@@ -221,7 +226,7 @@ public partial class MainWindow : Window
 
         bool searching = query.Length > 0;
         ResultsPanel.Visibility = searching ? Visibility.Visible : Visibility.Collapsed;
-        HomePanel.Visibility = searching ? Visibility.Collapsed : Visibility.Visible;
+        UpdatePanels(searching);
         if (!searching)
         {
             Results.ItemsSource = null;

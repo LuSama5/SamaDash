@@ -90,6 +90,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="18"
                            Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,12,0" />
@@ -98,7 +99,27 @@
                          VerticalContentAlignment="Center" TextChanged="OnQueryChanged" />
                 <TextBlock x:Name="Placeholder" Grid.Column="1" Text="Cerca app, file e cartelle…" IsHitTestVisible="False"
                            FontSize="20" Foreground="#6B7076" VerticalAlignment="Center" Margin="3,0,0,0" />
-                <Button x:Name="HotkeyButton" Grid.Column="2" Style="{StaticResource Flat}" Height="34" Padding="8,0"
+                <!-- Schede -->
+                <Border Grid.Column="2" Background="#0FFFFFFF" CornerRadius="9" Padding="3" Margin="0,0,8,0"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="HomeTab" Style="{StaticResource Tab}" GroupName="Tabs" IsChecked="True"
+                                     Checked="OnTabChanged">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE80F;" FontFamily="{StaticResource Glyphs}" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Home" Margin="6,0,0,0" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="DisplaysTab" Style="{StaticResource Tab}" GroupName="Tabs" Checked="OnTabChanged"
+                                     ToolTip="Luminosità, HDR, frequenza e modalità di proiezione">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Glyphs}" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Schermi" Margin="6,0,0,0" />
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+                </Border>
+                <Button x:Name="HotkeyButton" Grid.Column="3" Style="{StaticResource Flat}" Height="34" Padding="8,0"
                         Margin="0,0,4,0" Click="OnHotkeyClick">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE765;" FontFamily="{StaticResource Glyphs}" FontSize="15"
@@ -107,7 +128,7 @@
                                    Margin="6,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-                <ToggleButton x:Name="Pin" Grid.Column="3" Width="34" Height="34" Cursor="Hand"
+                <ToggleButton x:Name="Pin" Grid.Column="4" Width="34" Height="34" Cursor="Hand"
                               ToolTip="Tieni aperta (per trascinare file qui sopra)" FocusVisualStyle="{x:Null}">
                     <ToggleButton.Template>
                         <ControlTemplate TargetType="ToggleButton">
@@ -192,6 +213,103 @@
 
             <!-- Home -->
             <StackPanel x:Name="HomePanel">
+                <!-- In riproduzione: compare solo quando un'app sta riproducendo -->
+                <StackPanel x:Name="MusicPanel" Visibility="Collapsed">
+                    <TextBlock Text="IN RIPRODUZIONE" Style="{StaticResource SectionTitle}" />
+                    <Border Style="{StaticResource Card}" Padding="12">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#478C4D99" Offset="0" />
+                                <GradientStop Color="#0AFFFFFF" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="MusicCover" Width="60" Height="60" CornerRadius="10">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#F97359" Offset="0" />
+                                        <GradientStop Color="#7340D9" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <TextBlock x:Name="MusicCoverGlyph" Text="&#xE8D6;" FontFamily="{StaticResource Glyphs}" FontSize="22"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="MusicTitle" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="MusicArtist" FontSize="12" Foreground="{StaticResource Muted}"
+                                           TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource Glyphs}" FontSize="11"
+                                               Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="MusicApp" FontSize="11" Foreground="{StaticResource Muted}" Margin="5,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button x:Name="MusicPrev" Style="{StaticResource Flat}" Width="34" Height="34" Click="OnMusicPrev"
+                                            ToolTip="Precedente">
+                                        <TextBlock Text="&#xE892;" FontFamily="{StaticResource Glyphs}" FontSize="14" />
+                                    </Button>
+                                    <Button Width="40" Height="40" Margin="12,0" Click="OnMusicPlayPause" Cursor="Hand"
+                                            FocusVisualStyle="{x:Null}" ToolTip="Riproduci / pausa">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bg" Background="White" CornerRadius="20">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bg" Property="Background" Value="#DCE0E6" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <TextBlock x:Name="MusicPlayGlyph" Text="&#xE769;" FontFamily="{StaticResource Glyphs}"
+                                                   FontSize="15" Foreground="#141418" />
+                                    </Button>
+                                    <Button x:Name="MusicNext" Style="{StaticResource Flat}" Width="34" Height="34" Click="OnMusicNext"
+                                            ToolTip="Successivo">
+                                        <TextBlock Text="&#xE893;" FontFamily="{StaticResource Glyphs}" FontSize="14" />
+                                    </Button>
+                                </StackPanel>
+                                <Grid x:Name="MusicProgressRow" Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="40" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="MusicPosition" FontSize="11" Foreground="{StaticResource Muted}" />
+                                    <Grid x:Name="MusicTrack" Grid.Column="1" Height="4" VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition x:Name="MusicDone" Width="0*" />
+                                            <ColumnDefinition x:Name="MusicLeft" Width="1*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.ColumnSpan="2" Background="#24FFFFFF" CornerRadius="2" />
+                                        <Border Background="#D9FFFFFF" CornerRadius="2" />
+                                    </Grid>
+                                    <TextBlock x:Name="MusicDuration" Grid.Column="2" FontSize="11" Foreground="{StaticResource Muted}"
+                                               TextAlignment="Right" />
+                                </Grid>
+                            </StackPanel>
+                            <Button x:Name="MusicSourceButton" Grid.Column="3" Style="{StaticResource Flat}" Padding="10,6"
+                                    Background="#0FFFFFFF" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Click="OnMusicSource" ToolTip="Scegli quale app controllare">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="MusicSourceText" FontSize="12" />
+                                    <TextBlock Text="&#xE70D;" FontFamily="{StaticResource Glyphs}" FontSize="9"
+                                               Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="7,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
                 <TextBlock Text="SUGGERITI" Style="{StaticResource SectionTitle}" />
                 <WrapPanel>
                     <ItemsControl x:Name="SuggestedApps" ItemTemplate="{StaticResource Tile}" ItemsPanel="{StaticResource Wrap}" />
@@ -296,6 +414,49 @@
 
                 <TextBlock Text="SISTEMA" Style="{StaticResource SectionTitle}" />
                 <WrapPanel x:Name="SystemBar" />
+            </StackPanel>
+
+            <!-- Schermi: le schede vengono create dal codice in base ai monitor collegati -->
+            <StackPanel x:Name="DisplaysPanel" Visibility="Collapsed">
+                <TextBlock Text="SCHERMI RILEVATI" Style="{StaticResource SectionTitle}" />
+                <TextBlock x:Name="DisplaysStatus" Text="Lettura degli schermi…" FontSize="12" Foreground="{StaticResource Muted}"
+                           Margin="6,0,0,6" />
+                <UniformGrid x:Name="DisplayCards" Rows="1" Margin="-6,0" />
+
+                <TextBlock Text="TUTTI GLI SCHERMI" Style="{StaticResource SectionTitle}" />
+                <Border Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel x:Name="ProjectionPanel" VerticalAlignment="Center">
+                            <TextBlock Text="Modalità proiezione" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,6" />
+                            <WrapPanel x:Name="ProjectionChoices" Margin="0,0,0,-6" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource Flat}" Background="#0FFFFFFF" Padding="14,9" Margin="12,0,0,0"
+                                VerticalAlignment="Center" Click="OnNightLight">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE708;" FontFamily="{StaticResource Glyphs}" FontSize="15" VerticalAlignment="Center" />
+                                <StackPanel Margin="10,0,0,0">
+                                    <TextBlock Text="Luce notturna" FontSize="12.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="Apre le impostazioni" FontSize="11" Foreground="{StaticResource Muted}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" Style="{StaticResource Flat}" Background="#0FFFFFFF" Padding="14,9" Margin="8,0,0,0"
+                                VerticalAlignment="Center" Click="OnDisplaySettings">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE713;" FontFamily="{StaticResource Glyphs}" FontSize="15" VerticalAlignment="Center" />
+                                <StackPanel Margin="10,0,0,0">
+                                    <TextBlock Text="Impostazioni schermo" FontSize="12.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="Risoluzione, scala, disposizione" FontSize="11" Foreground="{StaticResource Muted}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
             </StackPanel>
         </StackPanel>
     </Border>
