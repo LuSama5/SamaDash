@@ -49,3 +49,6 @@ I dati restano solo su questo PC, in `%LOCALAPPDATA%\SamaDash`:
 - L'interfaccia è in italiano.
 - DDC/CI va attivato nel menu del monitor su alcuni modelli; se non risponde, SamaDash usa l'oscuramento software.
 - Il design dell'interfaccia è su Figma (file "SamaDash – Schermi").
+
+## Licenza
+[MIT](LICENSE)

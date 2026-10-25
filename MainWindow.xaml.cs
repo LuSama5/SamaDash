@@ -303,7 +303,7 @@ public partial class MainWindow : Window
         Source = EntrySource.Result,
     };
 
-    /// <summary>"github.com", "www.polimi.it/servizi": parole senza spazi con un dominio.</summary>
+    /// <summary>"github.com", "www.example.org/pagina": parole senza spazi con un dominio.</summary>
     static bool LooksLikeSite(string query) =>
         !query.Contains(' ') && !query.Contains('\\') &&
         System.Text.RegularExpressions.Regex.IsMatch(query, @"^(https?://)?[\w-]+(\.[\w-]+)*\.[a-z]{2,}(/\S*)?$",
