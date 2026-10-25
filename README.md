@@ -1,6 +1,25 @@
 # SamaDash
 
-Dashboard a scomparsa in alto sullo schermo per Windows 11. Si apre e si chiude dall'icona nella tray.
+Dashboard a scomparsa in alto sullo schermo per Windows 11. Si apre con una scorciatoia (Alt+Spazio), dall'icona nella tray o dalla mini barra.
+
+![Home: brano in riproduzione, app suggerite, salute del PC, controlli rapidi e shortcut](docs/screenshots/home.png)
+
+<details>
+<summary>Altre schermate</summary>
+
+**Schermi**: luminosità, contrasto, HDR e frequenza per ogni monitor collegato
+
+![Scheda Schermi](docs/screenshots/schermi.png)
+
+**Calcoli nella ricerca**
+
+![Calcolo nella barra di ricerca](docs/screenshots/ricerca.png)
+
+**Mini barra** sempre visibile, con app fissate, suggerite, musica e accesso agli schermi
+
+![Mini barra](docs/screenshots/minibarra.png)
+
+</details>
 
 - **Ricerca istantanea** di app e file su tutto il PC (motore [Everything](https://www.voidtools.com/)), con i filtri Tutto / App / Documenti / Immagini / Cartelle
 - **Suggeriti**: le app che usi di più a quest'ora e in questo giorno, più gli ultimi file aperti
