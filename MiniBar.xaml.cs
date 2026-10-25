@@ -72,7 +72,8 @@ public partial class MiniBar : Window
     /// <summary>Visibile solo se attiva, con la dashboard chiusa e senza app a schermo intero.</summary>
     void UpdateVisibility()
     {
-        bool show = Enabled && !dashboard.IsVisible && !Native.IsFullscreenAppRunning();
+        bool show = Enabled && !dashboard.IsVisible &&
+                    !Native.IsFullscreenAppRunning(new WindowInteropHelper(this).EnsureHandle());
         if (show && !IsVisible)
         {
             Show();

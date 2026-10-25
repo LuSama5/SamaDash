@@ -130,8 +130,44 @@ internal static class Native
     }
 
     /// <summary>True con giochi, video o presentazioni a schermo intero.</summary>
-    public static bool IsFullscreenAppRunning() =>
-        SHQueryUserNotificationState(out int state) == 0 && state is 2 or 3 or 4;
+    /// <summary>
+    /// True se sul monitor di <paramref name="window"/> c'è un'app a schermo intero (gioco, video, presentazione).
+    /// Non uso lo stato "occupato" di SHQueryUserNotificationState: scatta anche cliccando sul desktop
+    /// e con lo schermo intero su un altro monitor.
+    /// </summary>
+    public static bool IsFullscreenAppRunning(IntPtr window)
+    {
+        // Direct3D a schermo intero esclusivo o modalità presentazione
+        if (SHQueryUserNotificationState(out int state) == 0 && state is 3 or 4) return true;
+
+        var fg = GetForegroundWindow();
+        if (fg == IntPtr.Zero) return false;
+        GetWindowThreadProcessId(fg, out uint pid);
+        if (pid == Environment.ProcessId) return false;
+        var cls = new System.Text.StringBuilder(64);
+        GetClassName(fg, cls, cls.Capacity);
+        if (cls.ToString() is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return false;
+        // con la taskbar a scomparsa una finestra massimizzata copre tutto il monitor, ma non è schermo intero
+        if (IsZoomed(fg)) return false;
+
+        var monitor = MonitorFromWindow(fg, MONITOR_DEFAULTTONEAREST);
+        if (monitor != MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST)) return false;
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(monitor, ref info) || !GetWindowRect(fg, out var r)) return false;
+        var m = info.rcMonitor;
+        return r.Left <= m.Left && r.Top <= m.Top && r.Right >= m.Right && r.Bottom >= m.Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public int dwFlags; }
+
+    const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int max);
+    [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hwnd);
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+    [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
 
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);
