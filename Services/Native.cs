@@ -86,6 +86,43 @@ internal static class Native
         }
     }
 
+    [DllImport("kernel32.dll")]
+    public static extern bool GetSystemTimes(out long idle, out long kernel, out long user);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile;
+        public ulong ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll")]
+    public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX status);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SHQUERYRBINFO
+    {
+        public int cbSize;
+        public long i64Size;
+        public long i64NumItems;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern int SHQueryRecycleBin(string? rootPath, ref SHQUERYRBINFO info);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint msg, IntPtr wParam, string lParam,
+        uint flags, uint timeout, out IntPtr result);
+
+    /// <summary>Avvisa tutte le finestre che un'impostazione è cambiata (es. "ImmersiveColorSet" per il tema).</summary>
+    public static void BroadcastSettingChange(string area)
+    {
+        const uint WM_SETTINGCHANGE = 0x1A, SMTO_ABORTIFHUNG = 0x2;
+        SendMessageTimeout((IntPtr)0xFFFF, WM_SETTINGCHANGE, IntPtr.Zero, area, SMTO_ABORTIFHUNG, 200, out _);
+    }
+
     /// <summary>True con giochi, video o presentazioni a schermo intero.</summary>
     public static bool IsFullscreenAppRunning() =>
         SHQueryUserNotificationState(out int state) == 0 && state is 2 or 3 or 4;

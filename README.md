@@ -6,6 +6,15 @@ Dashboard a scomparsa in alto sullo schermo per Windows 11. Si apre e si chiude 
 - **Suggeriti**: le app che usi di più a quest'ora e in questo giorno, più gli ultimi file aperti
 - **Shortcut** personalizzati: trascina sulla barra file, cartelle o link, oppure usa "+"
 - **Azioni di sistema**: Blocca, Sospendi, Riavvia, Spegni, Svuota cestino, Impostazioni, Gestione attività
+- **Calcoli nella ricerca**: `15*3`, `10 km in mi`, `20 eur in usd` (tassi BCE); in fondo ai risultati "Cerca su Google"
+- **Salute PC**: barre per disco, RAM e CPU; "Libera spazio" per Temp, Cestino e cache dei browser, con anteprima dei GB recuperabili
+- **Controlli rapidi**: uscita audio, volume e muto, tema chiaro/scuro, Non disturbare
+- **Mini barra** sempre visibile, spostabile ovunque, con le app fissate sulla taskbar (sincronizzate) e le suggerite
+
+## Test
+```powershell
+dotnet test SamaDash.Tests
+```
 
 ## Requisiti
 - Windows 11, .NET 10 SDK

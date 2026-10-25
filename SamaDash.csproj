@@ -17,4 +17,14 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="SamaDash.Tests\**" />
+    <None Remove="SamaDash.Tests\**" />
+    <Page Remove="SamaDash.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+  </ItemGroup>
+
 </Project>

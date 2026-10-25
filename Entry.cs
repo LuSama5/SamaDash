@@ -3,7 +3,7 @@ using SamaDash.Services;
 
 namespace SamaDash;
 
-public enum EntryKind { App, File, Folder, Url, Add }
+public enum EntryKind { App, File, Folder, Url, Add, Calc, Web }
 
 public enum EntrySource { Result, Suggested, Recent, Shortcut }
 
@@ -26,7 +26,7 @@ public class Entry
     {
         get
         {
-            if (!iconLoaded && Kind != EntryKind.Add)
+            if (!iconLoaded && Kind is not (EntryKind.Add or EntryKind.Calc))
             {
                 icon = IconCache.Get(IconPath ?? Path);
                 iconLoaded = true;
@@ -36,4 +36,7 @@ public class Entry
     }
 
     public bool IsAdd => Kind == EntryKind.Add;
+
+    /// <summary>Icona a simbolo per gli elementi senza icona di file (calcolatrice).</summary>
+    public string Glyph => Kind == EntryKind.Calc ? "" : "";
 }
