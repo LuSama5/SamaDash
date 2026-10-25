@@ -40,6 +40,8 @@ public class Settings
 {
     public bool FirstRunDone { get; set; }
     public bool MiniBarEnabled { get; set; } = true;
+    /// <summary>Scorciatoia per aprire la dashboard (es. "Alt+Space"); vuota = disattivata.</summary>
+    public string Hotkey { get; set; } = "Alt+Space";
     /// <summary>Posizione della mini barra; null = in alto al centro.</summary>
     public double? MiniBarLeft { get; set; }
     public double? MiniBarTop { get; set; }

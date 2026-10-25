@@ -89,6 +89,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="18"
                            Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,12,0" />
@@ -97,7 +98,16 @@
                          VerticalContentAlignment="Center" TextChanged="OnQueryChanged" />
                 <TextBlock x:Name="Placeholder" Grid.Column="1" Text="Cerca app, file e cartelle…" IsHitTestVisible="False"
                            FontSize="20" Foreground="#6B7076" VerticalAlignment="Center" Margin="3,0,0,0" />
-                <ToggleButton x:Name="Pin" Grid.Column="2" Width="34" Height="34" Cursor="Hand"
+                <Button x:Name="HotkeyButton" Grid.Column="2" Style="{StaticResource Flat}" Height="34" Padding="8,0"
+                        Margin="0,0,4,0" Click="OnHotkeyClick">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE765;" FontFamily="{StaticResource Glyphs}" FontSize="15"
+                                   Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="HotkeyText" FontSize="11.5" Foreground="{StaticResource Muted}"
+                                   Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <ToggleButton x:Name="Pin" Grid.Column="3" Width="34" Height="34" Cursor="Hand"
                               ToolTip="Tieni aperta (per trascinare file qui sopra)" FocusVisualStyle="{x:Null}">
                     <ToggleButton.Template>
                         <ControlTemplate TargetType="ToggleButton">
