@@ -32,20 +32,30 @@ Dashboard a scomparsa in alto sullo schermo per Windows 11. Si apre con una scor
 - **In riproduzione**: brano, copertina e controlli di qualsiasi app che usa i controlli multimediali di Windows (Spotify, browser, lettori), con scelta della fonte se ce n'è più d'una
 - **Mini barra** sempre visibile, spostabile ovunque, con le app fissate sulla taskbar (sincronizzate), le suggerite, il brano in riproduzione e l'accesso rapido agli schermi
 
-## Test
+## Download
+Scarica l'ultima versione da **[Releases](https://github.com/LuSama5/SamaDash/releases/latest)**:
+- `SamaDash-x.y.z-win-x64.zip`: estrai `SamaDash.exe` in una cartella (es. `%LOCALAPPDATA%\Programs\SamaDash`) e avvialo. Non serve installare nient'altro.
+- `SamaDash-x.y.z-win-x64-net10.exe`: versione leggera, richiede il [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+Al primo avvio SamaDash si aggiunge all'avvio con Windows (lo puoi disattivare dal menu della tray). L'exe non è firmato: Windows SmartScreen può mostrare un avviso, clicca "Ulteriori informazioni" → "Esegui comunque".
+
+Per la ricerca dei file serve [Everything](https://www.voidtools.com/):
 ```powershell
-dotnet test SamaDash.Tests
+winget install voidtools.Everything; winget install voidtools.Everything.Cli
 ```
 
 ## Requisiti
-- Windows 11 (Windows 10 2004+ per la maggior parte delle funzioni), .NET 10 SDK
-- Everything: `winget install voidtools.Everything` e `winget install voidtools.Everything.Cli`
+- Windows 11 (Windows 10 2004+ per la maggior parte delle funzioni)
+- Everything per la ricerca dei file (le altre funzioni vanno anche senza)
 
-## Installazione
+## Compilare dal codice
+Serve il .NET 10 SDK.
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
-Compila il progetto, lo installa in `%LOCALAPPDATA%\Programs\SamaDash`, crea il collegamento nel menu Start e lo avvia. Al primo avvio attiva anche l'avvio con Windows (lo puoi disattivare dal menu della tray).
+Compila il progetto, lo installa in `%LOCALAPPDATA%\Programs\SamaDash`, crea il collegamento nel menu Start e lo avvia.
+
+Test: `dotnet test SamaDash.Tests`
 
 ## Uso
 | Azione | Come |
