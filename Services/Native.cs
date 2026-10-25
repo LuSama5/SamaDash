@@ -30,6 +30,23 @@ internal static class Native
     [DllImport("user32.dll")]
     public static extern bool AllowSetForegroundWindow(int processId);
 
+    public const int GWL_EXSTYLE = -20;
+    public const long WS_EX_TOOLWINDOW = 0x80;
+    public const long WS_EX_NOACTIVATE = 0x08000000;
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    public static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    public static extern IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr value);
+
+    [DllImport("shell32.dll")]
+    static extern int SHQueryUserNotificationState(out int state);
+
+    /// <summary>True con giochi, video o presentazioni a schermo intero.</summary>
+    public static bool IsFullscreenAppRunning() =>
+        SHQueryUserNotificationState(out int state) == 0 && state is 2 or 3 or 4;
+
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);
 

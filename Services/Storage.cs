@@ -39,4 +39,11 @@ public static class Storage
 public class Settings
 {
     public bool FirstRunDone { get; set; }
+    public bool MiniBarEnabled { get; set; } = true;
+    /// <summary>Posizione orizzontale della mini barra; null = centrata.</summary>
+    public double? MiniBarLeft { get; set; }
+
+    public static Settings Current { get; } = Storage.Load<Settings>("settings.json") ?? new Settings();
+
+    public void Save() => Storage.Save("settings.json", this);
 }

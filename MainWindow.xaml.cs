@@ -15,6 +15,8 @@ namespace SamaDash;
 public partial class MainWindow : Window
 {
     public UsageTracker Tracker { get; } = new();
+    /// <summary>Completato quando l'elenco delle app del menu Start è pronto.</summary>
+    public Task AppsLoaded { get; }
 
     readonly AppIndex apps = new();
     readonly ShortcutStore shortcuts = new();
@@ -29,7 +31,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         ready = true;
-        _ = apps.LoadAsync();
+        AppsLoaded = apps.LoadAsync();
         shortcuts.Load();
         BuildSystemBar();
     }
@@ -206,20 +208,28 @@ public partial class MainWindow : Window
 
     async Task RefreshSuggestionsAsync()
     {
-        var (top, recent) = await Task.Run(() => (Tracker.Top(12), Shell.RecentFiles(3)));
-
-        var suggested = new List<Entry>();
-        foreach (var exe in top)
-        {
-            var entry = ExeToEntry(exe);
-            if (entry != null && !suggested.Any(s => s.Name == entry.Name)) suggested.Add(entry);
-            if (suggested.Count == 3) break;
-        }
+        var recentTask = Task.Run(() => Shell.RecentFiles(3));
+        var suggested = await SuggestedAppsAsync(3);
+        var recent = await recentTask;
 
         SuggestedApps.ItemsSource = suggested;
         RecentFiles.ItemsSource = recent.Select(p => FileEntry(p, EntrySource.Recent)).ToList();
         SuggestSeparator.Visibility = suggested.Count > 0 && recent.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         SuggestHint.Visibility = suggested.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Le app più probabili adesso, già pronte da mostrare (usata anche dalla mini barra).</summary>
+    public async Task<List<Entry>> SuggestedAppsAsync(int count)
+    {
+        var top = await Task.Run(() => Tracker.Top(count * 4));
+        var suggested = new List<Entry>();
+        foreach (var exe in top)
+        {
+            var entry = ExeToEntry(exe);
+            if (entry != null && !suggested.Any(s => s.Name == entry.Name)) suggested.Add(entry);
+            if (suggested.Count == count) break;
+        }
+        return suggested;
     }
 
     void RefreshShortcuts()
@@ -352,7 +362,7 @@ public partial class MainWindow : Window
 
     // ---------- Apertura ----------
 
-    void Open(Entry entry, bool reveal = false)
+    public void Open(Entry entry, bool reveal = false)
     {
         try
         {

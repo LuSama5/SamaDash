@@ -1,0 +1,43 @@
+<Window x:Class="SamaDash.MiniBar"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SamaDash Mini" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        SizeToContent="WidthAndHeight" FontFamily="Segoe UI Variable Text, Segoe UI" Foreground="#F2F2F4"
+        MouseEnter="OnMouseEnter" MouseLeave="OnMouseLeave">
+    <Border x:Name="Root" CornerRadius="0,0,12,12" Background="#E6141418" BorderBrush="#30FFFFFF"
+            BorderThickness="1,0,1,1" Padding="4,3,4,4" Opacity="0.4">
+        <StackPanel Orientation="Horizontal">
+            <!-- Maniglia per spostare la barra lungo il bordo -->
+            <TextBlock Text="&#xE76F;" FontFamily="{StaticResource Glyphs}" FontSize="12" Foreground="{StaticResource Muted}"
+                       VerticalAlignment="Center" Padding="6,6" Cursor="SizeWE" Background="Transparent"
+                       ToolTip="Trascina per spostare" MouseLeftButtonDown="OnDragHandle" />
+
+            <Button Style="{StaticResource Flat}" Padding="8,4" Click="OnOpenDashboard" ToolTip="Apri la dashboard">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="Cerca" FontSize="12" Margin="7,0,4,0" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <ItemsControl x:Name="Apps" VerticalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource Flat}" Width="30" Height="26" ToolTip="{Binding Name}" Click="OnAppClick">
+                            <Image Source="{Binding Icon}" Width="18" Height="18" RenderOptions.BitmapScalingMode="HighQuality" />
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button Style="{StaticResource Flat}" Width="30" Height="26" Click="OnOpenDashboard" ToolTip="Apri la dashboard completa">
+                <TextBlock Text="&#xE70D;" FontFamily="{StaticResource Glyphs}" FontSize="11" />
+            </Button>
+        </StackPanel>
+    </Border>
+</Window>
