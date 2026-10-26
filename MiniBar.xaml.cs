@@ -43,7 +43,7 @@ public partial class MiniBar : Window
         expandTimer.Tick += (_, _) =>
         {
             expandTimer.Stop();
-            if (!dragging && IsMouseOver) SetExpanded(true);
+            if (!dragging && IsMouseOver && !PillGrip.IsMouseOver) SetExpanded(true);
         };
         collapseTimer.Tick += (_, _) =>
         {
@@ -251,6 +251,8 @@ public partial class MiniBar : Window
         MusicInfoButton.Padding = vertical ? new Thickness(0) : new Thickness(0, 0, 8, 0);
         PillCover.Margin = vertical ? new Thickness(0, 0, 0, 7) : new Thickness(0, 0, 7, 0);
         Handle.Text = vertical ? "" : "";
+        PillGrip.Text = Handle.Text;
+        PillGrip.Padding = vertical ? new Thickness(10, 8, 10, 2) : new Thickness(8, 10, 2, 10);
         Handle.Padding = vertical ? new Thickness(12, 8, 12, 8) : new Thickness(8, 12, 8, 12);
         // la freccia indica dove si aprirà la dashboard
         CompactGlyph.Text = Compact ? "" : "";
@@ -381,4 +383,12 @@ public partial class MiniBar : Window
     }
 
     bool dragging;
+
+    // sulla maniglia della pillola non si espande: così si può spostare restando compatta
+    void OnGripEnter(object sender, MouseEventArgs e) => expandTimer.Stop();
+
+    void OnGripLeave(object sender, MouseEventArgs e)
+    {
+        if (Compact && !expanded && !holdCollapsed && !dragging && IsMouseOver) expandTimer.Start();
+    }
 }

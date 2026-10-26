@@ -49,7 +49,12 @@
                 </Grid.RenderTransform>
                 <!-- Versione compatta a riposo: si espande al passaggio del mouse -->
                 <StackPanel x:Name="Pill" Orientation="Horizontal" Visibility="Collapsed" Background="Transparent"
-                            Cursor="SizeAll" MouseLeftButtonDown="OnDragHandle">
+                            Cursor="Hand">
+                    <!-- Maniglia fissa: sposta la pillola senza espanderla -->
+                    <TextBlock x:Name="PillGrip" Text="&#xE76F;" FontFamily="{StaticResource Glyphs}" FontSize="13"
+                               Foreground="{StaticResource Muted}" Padding="8,10,2,10" Background="Transparent" Cursor="SizeAll"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Trascina per spostare"
+                               MouseLeftButtonDown="OnDragHandle" MouseEnter="OnGripEnter" MouseLeave="OnGripLeave" />
                     <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="15" Margin="9"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                     <Border x:Name="PillCover" Width="24" Height="24" CornerRadius="6" Margin="0,0,7,0"
