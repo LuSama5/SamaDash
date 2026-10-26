@@ -36,15 +36,22 @@ public static class Storage
     }
 }
 
+/// <summary>Dove si trova la mini barra. Free = lontana dai bordi.</summary>
+public enum BarEdge { Top, Bottom, Left, Right, Free }
+
 public class Settings
 {
     public bool FirstRunDone { get; set; }
     public bool MiniBarEnabled { get; set; } = true;
     /// <summary>Scorciatoia per aprire la dashboard (es. "Alt+Space"); vuota = disattivata.</summary>
     public string Hotkey { get; set; } = "Alt+Space";
-    /// <summary>Posizione della mini barra; null = in alto al centro.</summary>
-    public double? MiniBarLeft { get; set; }
-    public double? MiniBarTop { get; set; }
+    /// <summary>Centro della mini barra in pixel fisici; null = in alto al centro dello schermo principale.</summary>
+    public int? MiniBarX { get; set; }
+    public int? MiniBarY { get; set; }
+    /// <summary>Bordo a cui è agganciata la mini barra: decide orientamento e verso di apertura della dashboard.</summary>
+    public BarEdge MiniBarEdge { get; set; } = BarEdge.Top;
+    /// <summary>Mini barra a pillola: si espande solo al passaggio del mouse.</summary>
+    public bool MiniBarCompact { get; set; }
     /// <summary>App fissate sulla taskbar già importate negli shortcut (non vengono riaggiunte se le rimuovi).</summary>
     public List<string> ImportedPins { get; set; } = [];
     /// <summary>Oscuramento software (0-100) per gli schermi senza DDC/CI, per percorso del dispositivo.</summary>

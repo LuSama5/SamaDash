@@ -50,7 +50,12 @@ internal static class Native
     static extern int SHQueryUserNotificationState(out int state);
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct RECT { public int Left, Top, Right, Bottom; }
+    public struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+        public readonly int Width => Right - Left;
+        public readonly int Height => Bottom - Top;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     struct APPBARDATA
@@ -168,6 +173,49 @@ internal static class Native
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+
+    // ---- Geometria in pixel fisici (gli schermi possono avere scale diverse)
+
+    public static RECT WindowRect(IntPtr hwnd) => GetWindowRect(hwnd, out var r) ? r : default;
+
+    /// <summary>Area di lavoro (senza taskbar) del monitor che contiene il punto, o il più vicino.</summary>
+    public static RECT WorkAreaAt(int x, int y)
+    {
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        GetMonitorInfo(MonitorFromPoint(new POINT { X = x, Y = y }, MONITOR_DEFAULTTONEAREST), ref info);
+        return info.rcWork;
+    }
+
+    /// <summary>Area di lavoro del monitor principale.</summary>
+    public static RECT PrimaryWorkArea() => WorkAreaAt(0, 0);
+
+    /// <summary>Scala del monitor che contiene il punto (1 = 100%, 1.25 = 125%…).</summary>
+    public static double ScaleAt(int x, int y)
+    {
+        var monitor = MonitorFromPoint(new POINT { X = x, Y = y }, MONITOR_DEFAULTTONEAREST);
+        return GetDpiForMonitor(monitor, 0, out uint dpi, out _) == 0 ? dpi / 96.0 : 1;
+    }
+
+    public static (int X, int Y) CursorPosition() => GetCursorPos(out var p) ? (p.X, p.Y) : (0, 0);
+
+    public static bool IsCursorOver(IntPtr hwnd)
+    {
+        var (x, y) = CursorPosition();
+        var r = WindowRect(hwnd);
+        return x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
+    }
+
+    /// <summary>Sposta la finestra (pixel fisici) senza cambiarne dimensioni, ordine o focus.</summary>
+    public static void MoveWindow(IntPtr hwnd, int x, int y) =>
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+    const uint SWP_NOSIZE = 0x1, SWP_NOZORDER = 0x4;
+
+    [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
+
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+    [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT point);
+    [DllImport("shcore.dll")] static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);

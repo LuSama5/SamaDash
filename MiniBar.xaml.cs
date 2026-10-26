@@ -37,7 +37,22 @@ public partial class MiniBar : Window
             _ = RefreshMediaAsync();
             if (DateTime.Now - lastRefresh > TimeSpan.FromMinutes(5)) _ = RefreshAppsAsync();
         };
-        SizeChanged += (_, _) => Place();
+        // ridimensionandosi (espansione, orientamento, musica) resta ancorata al bordo e al centro salvato
+        // a layout finito: se la sposto durante il ridimensionamento WPF ignora la nuova posizione
+        SizeChanged += (_, _) => Dispatcher.BeginInvoke(Place, DispatcherPriority.Loaded);
+        expandTimer.Tick += (_, _) =>
+        {
+            expandTimer.Stop();
+            if (!dragging && IsMouseOver) SetExpanded(true);
+        };
+        collapseTimer.Tick += (_, _) =>
+        {
+            collapseTimer.Stop();
+            // il ridimensionamento può far scattare un MouseLeave finto: ricontrollo
+            if (!dragging && !IsMouseOver && !Native.IsCursorOver(Hwnd)) SetExpanded(false);
+        };
+        dashboard.AnchorProvider = AnchorInfo;
+        ApplyLayout();
     }
 
     public bool Enabled
@@ -86,19 +101,148 @@ public partial class MiniBar : Window
         }
     }
 
+    // ---------- Posizione e aggancio ai bordi ----------
+    // Tutto in pixel fisici: con schermi a scale diverse le coordinate WPF non bastano.
+
+    IntPtr Hwnd => new WindowInteropHelper(this).Handle;
+
+    BarEdge Edge => Settings.Current.MiniBarEdge;
+
+    /// <summary>Centro salvato della barra, o in alto al centro dello schermo principale.</summary>
+    (int X, int Y) Anchor()
+    {
+        if (Settings.Current.MiniBarX is int x && Settings.Current.MiniBarY is int y) return (x, y);
+        var work = Native.PrimaryWorkArea();
+        return ((work.Left + work.Right) / 2, work.Top + 1);
+    }
+
+    /// <summary>Bordo e rettangolo visibile (senza l'ombra) della barra, per aprire la dashboard da lì; null se la barra è spenta.</summary>
+    internal (BarEdge Edge, Native.RECT Card)? AnchorInfo()
+    {
+        if (!Enabled || Hwnd == IntPtr.Zero) return null;
+        var r = Native.WindowRect(Hwnd);
+        int shadow = Shadow(r);
+        return (Edge, new Native.RECT { Left = r.Left + shadow, Top = r.Top + shadow, Right = r.Right - shadow, Bottom = r.Bottom - shadow });
+    }
+
+    int Shadow(Native.RECT r) =>
+        (int)Math.Round(ShadowMargin * Native.ScaleAt((r.Left + r.Right) / 2, (r.Top + r.Bottom) / 2));
+
     void Place()
     {
-        var area = SystemParameters.WorkArea;
-        double left = Settings.Current.MiniBarLeft ?? area.Left + (area.Width - ActualWidth) / 2;
-        double top = Settings.Current.MiniBarTop ?? area.Top - ShadowMargin + 8;
+        if (Hwnd == IntPtr.Zero || !IsVisible) return;
+        var r = Native.WindowRect(Hwnd);
+        var (ax, ay) = Anchor();
+        var work = Native.WorkAreaAt(ax, ay);
+        double scale = Native.ScaleAt(ax, ay);
+        int shadow = (int)Math.Round(ShadowMargin * scale), gap = (int)Math.Round(6 * scale);
 
-        // resta dentro gli schermi anche se cambia la configurazione dei monitor
-        double minX = SystemParameters.VirtualScreenLeft - ShadowMargin;
-        double minY = SystemParameters.VirtualScreenTop - ShadowMargin;
-        double maxX = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - ActualWidth + ShadowMargin;
-        double maxY = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - ActualHeight + ShadowMargin;
-        Left = Math.Clamp(left, minX, Math.Max(minX, maxX));
-        Top = Math.Clamp(top, minY, Math.Max(minY, maxY));
+        // centrata sul punto salvato, appoggiata al bordo a cui è agganciata
+        int x = ax - r.Width / 2, y = ay - r.Height / 2;
+        switch (Edge)
+        {
+            case BarEdge.Top: y = work.Top - shadow + gap; break;
+            case BarEdge.Bottom: y = work.Bottom - r.Height + shadow - gap; break;
+            case BarEdge.Left: x = work.Left - shadow + gap; break;
+            case BarEdge.Right: x = work.Right - r.Width + shadow - gap; break;
+        }
+        // sempre dentro lo schermo, anche se cambia la configurazione dei monitor
+        x = Math.Clamp(x, work.Left - shadow, Math.Max(work.Left - shadow, work.Right - r.Width + shadow));
+        y = Math.Clamp(y, work.Top - shadow, Math.Max(work.Top - shadow, work.Bottom - r.Height + shadow));
+        if (x != r.Left || y != r.Top) MainWindow.MoveTo(this, x, y);
+    }
+
+    /// <summary>Dopo un trascinamento: il bordo più vicino (entro una soglia) diventa quello di aggancio.</summary>
+    void SnapToEdge()
+    {
+        var card = AnchorInfo()!.Value.Card;
+        int cx = (card.Left + card.Right) / 2, cy = (card.Top + card.Bottom) / 2;
+        var work = Native.WorkAreaAt(cx, cy);
+        int threshold = (int)Math.Round(48 * Native.ScaleAt(cx, cy));
+
+        var distances = new (BarEdge Edge, int Distance)[]
+        {
+            (BarEdge.Top, card.Top - work.Top),
+            (BarEdge.Bottom, work.Bottom - card.Bottom),
+            (BarEdge.Left, card.Left - work.Left),
+            (BarEdge.Right, work.Right - card.Right),
+        };
+        // a parità (angoli) vince l'aggancio orizzontale, in alto o in basso
+        var nearest = distances.OrderBy(d => d.Distance).First();
+        var s = Settings.Current;
+        s.MiniBarEdge = nearest.Distance <= threshold ? nearest.Edge : BarEdge.Free;
+        s.MiniBarX = cx;
+        s.MiniBarY = cy;
+        s.Save();
+        ApplyLayout();
+        Place();
+    }
+
+    /// <summary>Riporta la barra in alto al centro dello schermo principale.</summary>
+    public void ResetPosition()
+    {
+        var s = Settings.Current;
+        s.MiniBarX = s.MiniBarY = null;
+        s.MiniBarEdge = BarEdge.Top;
+        s.Save();
+        ApplyLayout();
+        Place();
+    }
+
+    // ---------- Orientamento e versione compatta ----------
+
+    bool expanded;
+    readonly DispatcherTimer expandTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    readonly DispatcherTimer collapseTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
+
+    public bool Compact
+    {
+        get => Settings.Current.MiniBarCompact;
+        set
+        {
+            Settings.Current.MiniBarCompact = value;
+            Settings.Current.Save();
+            expanded = false;
+            ApplyLayout();
+        }
+    }
+
+    /// <summary>Verticale sui bordi laterali, orizzontale altrove; pillola se compatta e a riposo.</summary>
+    void ApplyLayout()
+    {
+        bool vertical = Edge is BarEdge.Left or BarEdge.Right;
+        bool pill = Compact && !expanded;
+        Pill.Visibility = pill ? Visibility.Visible : Visibility.Collapsed;
+        Full.Visibility = pill ? Visibility.Collapsed : Visibility.Visible;
+
+        var orientation = vertical ? System.Windows.Controls.Orientation.Vertical : System.Windows.Controls.Orientation.Horizontal;
+        Full.Orientation = Pill.Orientation = MusicRow.Orientation = MusicPanel.Orientation = orientation;
+        var divider = (Style)FindResource(vertical ? "DividerV" : "Divider");
+        foreach (var d in new[] { PinnedDivider, SuggestedDivider, MusicDivider, ToolsDivider }) d.Style = divider;
+        var panel = (System.Windows.Controls.ItemsPanelTemplate)FindResource(vertical ? "Column" : "Row");
+        Pinned.ItemsPanel = Suggested.ItemsPanel = panel;
+
+        // in verticale restano solo le icone
+        SearchText.Visibility = MusicText.Visibility = vertical ? Visibility.Collapsed : Visibility.Visible;
+        MusicInfoButton.Padding = vertical ? new Thickness(0) : new Thickness(0, 0, 8, 0);
+        PillCover.Margin = vertical ? new Thickness(0, 0, 0, 7) : new Thickness(0, 0, 7, 0);
+        Handle.Text = vertical ? "" : "";
+        Handle.Padding = vertical ? new Thickness(12, 8, 12, 8) : new Thickness(8, 12, 8, 12);
+        // la freccia indica dove si aprirà la dashboard
+        OpenGlyph.Text = Edge switch
+        {
+            BarEdge.Bottom => "",
+            BarEdge.Left => "",
+            BarEdge.Right => "",
+            _ => "",
+        };
+    }
+
+    void SetExpanded(bool value)
+    {
+        if (expanded == value) return;
+        expanded = value;
+        ApplyLayout();
     }
 
     /// <summary>App fissate (shortcut) + suggerite che non sono già tra le fissate.</summary>
@@ -125,10 +269,17 @@ public partial class MiniBar : Window
     {
         Fade(1);
         UpdateTaskbarButton();
+        collapseTimer.Stop();
+        if (Compact && !expanded) expandTimer.Start(); // piccolo ritardo: passandoci sopra per caso non si apre
         if (DateTime.Now - lastRefresh > TimeSpan.FromSeconds(30)) _ = RefreshAppsAsync();
     }
 
-    void OnMouseLeave(object sender, MouseEventArgs e) => Fade(IdleOpacity);
+    void OnMouseLeave(object sender, MouseEventArgs e)
+    {
+        Fade(IdleOpacity);
+        expandTimer.Stop();
+        if (expanded) collapseTimer.Start();
+    }
 
     void Fade(double to) =>
         Card.BeginAnimation(OpacityProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(150)));
@@ -149,13 +300,14 @@ public partial class MiniBar : Window
         {
             var now = await Media.CurrentAsync();
             MusicPanel.Visibility = now == null ? Visibility.Collapsed : Visibility.Visible;
+            PillCover.Visibility = MusicPanel.Visibility;
             if (now == null) return;
             MusicTitle.Text = now.Title;
             MusicArtist.Text = now.Artist.Length > 0 ? now.Artist : now.App;
             MusicPlayGlyph.Text = now.Playing ? "" : "";
             MusicNext.IsEnabled = now.CanNext;
             MusicNext.Opacity = now.CanNext ? 1 : 0.35;
-            MusicCover.Background = now.Cover != null
+            MusicCover.Background = PillCover.Background = now.Cover != null
                 ? new ImageBrush(now.Cover) { Stretch = Stretch.UniformToFill }
                 : defaultCover;
         }
@@ -192,19 +344,11 @@ public partial class MiniBar : Window
 
     void OnDragHandle(object sender, MouseButtonEventArgs e)
     {
+        dragging = true;
         DragMove();
-        Settings.Current.MiniBarLeft = Left;
-        Settings.Current.MiniBarTop = Top;
-        Settings.Current.Save();
-        Place();
+        dragging = false;
+        SnapToEdge();
     }
 
-    /// <summary>Riporta la barra in alto al centro.</summary>
-    public void ResetPosition()
-    {
-        Settings.Current.MiniBarLeft = null;
-        Settings.Current.MiniBarTop = null;
-        Settings.Current.Save();
-        Place();
-    }
+    bool dragging;
 }

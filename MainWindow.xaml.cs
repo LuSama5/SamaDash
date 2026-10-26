@@ -38,6 +38,8 @@ public partial class MainWindow : Window
         health.CpuUsage(); // prima lettura di riferimento
         healthTimer.Tick += (_, _) => RefreshHealth();
         InitMedia();
+        // i risultati cambiano l'altezza: con la mini barra in basso la dashboard deve crescere verso l'alto
+        SizeChanged += (_, _) => Dispatcher.BeginInvoke(() => { if (IsVisible) PlaceDashboard(); }, DispatcherPriority.Loaded);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -128,10 +130,9 @@ public partial class MainWindow : Window
 
     public void ShowBar()
     {
-        var area = SystemParameters.WorkArea;
-        Width = Math.Max(760, area.Width * 0.55);
-        Left = area.Left + (area.Width - Width) / 2;
-        Top = area.Top + 10;
+        var (anchor, work, scale) = Target();
+        Width = Math.Max(760, work.Width / scale * 0.55);
+        PlaceDashboard(); // prima di Show: così compare già sullo schermo giusto
 
         shortcuts.Load();
         RefreshShortcuts();
@@ -143,12 +144,18 @@ public partial class MainWindow : Window
         if (DisplaysTab.IsChecked == true) _ = RefreshDisplaysAsync();
 
         Show();
+        PlaceDashboard();
         Activate();
         Keyboard.Focus(Query);
 
+        // scivola fuori dal lato della mini barra
         var duration = TimeSpan.FromMilliseconds(180);
-        Slide.BeginAnimation(TranslateTransform.YProperty,
-            new DoubleAnimation(-16, 0, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var edge = anchor?.Edge ?? BarEdge.Top;
+        bool horizontal = edge is BarEdge.Left or BarEdge.Right;
+        double from = edge is BarEdge.Bottom or BarEdge.Right ? 16 : -16;
+        Slide.BeginAnimation(TranslateTransform.XProperty, horizontal ? new DoubleAnimation(from, 0, duration) { EasingFunction = ease } : null);
+        Slide.BeginAnimation(TranslateTransform.YProperty, horizontal ? null : new DoubleAnimation(from, 0, duration) { EasingFunction = ease });
         Root.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration));
     }
 

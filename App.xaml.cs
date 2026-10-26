@@ -112,7 +112,10 @@ public partial class App : Application
         var mini = new WinForms.ToolStripMenuItem("Mini barra") { CheckOnClick = true };
         mini.Click += (_, _) => miniBar!.Enabled = mini.Checked;
         menu.Items.Add(mini);
-        menu.Items.Add("Riporta la mini barra in alto", null, (_, _) => miniBar!.ResetPosition());
+        var compact = new WinForms.ToolStripMenuItem("Mini barra compatta (si espande al passaggio)") { CheckOnClick = true };
+        compact.Click += (_, _) => miniBar!.Compact = compact.Checked;
+        menu.Items.Add(compact);
+        menu.Items.Add("Riporta la mini barra in alto al centro", null, (_, _) => miniBar!.ResetPosition());
 
         var autoHide = new WinForms.ToolStripMenuItem("Barra di Windows a scomparsa") { CheckOnClick = true };
         autoHide.Click += (_, _) =>
@@ -127,6 +130,7 @@ public partial class App : Application
         {
             autostart.Checked = Autostart.IsEnabled;
             mini.Checked = miniBar!.Enabled;
+            compact.Checked = miniBar.Compact;
             autoHide.Checked = Native.TaskbarAutoHide;
         };
         autostart.Click += (_, _) => Autostart.Set(autostart.Checked);

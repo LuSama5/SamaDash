@@ -30,7 +30,8 @@ Dashboard a scomparsa in alto sullo schermo per Windows 11. Si apre con una scor
 - **Controlli rapidi**: uscita audio, volume e muto, tema chiaro/scuro, Non disturbare
 - **Schermi** (scheda dedicata): per ogni monitor collegato luminosità e contrasto via DDC/CI, luminosità WMI sui portatili, oppure oscuramento software se lo schermo non accetta comandi; HDR on/off, frequenza di aggiornamento, modalità di proiezione (come Win+P), Luce notturna. Tutto rilevato in automatico
 - **In riproduzione**: brano, copertina e controlli di qualsiasi app che usa i controlli multimediali di Windows (Spotify, browser, lettori), con scelta della fonte se ce n'è più d'una
-- **Mini barra** sempre visibile, spostabile ovunque, con le app fissate sulla taskbar (sincronizzate), le suggerite, il brano in riproduzione e l'accesso rapido agli schermi
+- **Mini barra** sempre visibile con app fissate sulla taskbar (sincronizzate), suggerite, brano in riproduzione e accesso rapido agli schermi. Trascinala dove vuoi: vicino al bordo in basso la dashboard si apre verso l'alto, sui bordi laterali diventa verticale e la dashboard si apre verso il centro, altrove si apre verso il basso da lì, anche sul secondo monitor
+- **Mini barra compatta** (menu della tray): a riposo è una piccola pillola, si espande al passaggio del mouse
 
 ## Download
 Scarica l'ultima versione da **[Releases](https://github.com/LuSama5/SamaDash/releases/latest)**:
@@ -64,6 +65,7 @@ Test: `dotnet test SamaDash.Tests`
 | Aprire il risultato | Invio o clic |
 | Aprire la cartella del file | Ctrl+Invio |
 | Altre opzioni | tasto destro su un elemento |
+| Spostare la mini barra | trascinala dalla maniglia; per riportarla in alto: menu della tray → "Riporta la mini barra in alto al centro" |
 | Tenerla aperta (es. per trascinare file) | puntina in alto a destra |
 | Chiudere | Esc o clic fuori dalla barra |
 

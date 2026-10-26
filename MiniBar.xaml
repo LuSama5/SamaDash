@@ -14,12 +14,25 @@
         <ItemsPanelTemplate x:Key="Row">
             <StackPanel Orientation="Horizontal" />
         </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="Column">
+            <StackPanel Orientation="Vertical" />
+        </ItemsPanelTemplate>
         <Style x:Key="Divider" TargetType="Border">
             <Setter Property="Width" Value="1" />
             <Setter Property="Height" Value="24" />
             <Setter Property="Margin" Value="6,0" />
             <Setter Property="Background" Value="#26FFFFFF" />
         </Style>
+        <Style x:Key="DividerV" TargetType="Border">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="0,6" />
+            <Setter Property="Background" Value="#26FFFFFF" />
+        </Style>
+        <LinearGradientBrush x:Key="CoverPlaceholder" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F97359" Offset="0" />
+            <GradientStop Color="#7340D9" Offset="1" />
+        </LinearGradientBrush>
     </Window.Resources>
 
     <!-- margine per far vedere l'ombra -->
@@ -30,72 +43,79 @@
             </Border.Effect>
         </Border>
         <Border CornerRadius="16" Background="#E6141418" BorderBrush="#30FFFFFF" BorderThickness="1" Padding="6">
-            <StackPanel Orientation="Horizontal">
-                <!-- Maniglia per spostare la barra -->
-                <TextBlock Text="&#xE76F;" FontFamily="{StaticResource Glyphs}" FontSize="14" Foreground="{StaticResource Muted}"
-                           VerticalAlignment="Center" Padding="8,12" Cursor="SizeAll" Background="Transparent"
-                           ToolTip="Trascina per spostare" MouseLeftButtonDown="OnDragHandle" />
-
-                <Button Style="{StaticResource Flat}" Height="40" Padding="12,0" Click="OnOpenDashboard" ToolTip="Apri la dashboard">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="15" VerticalAlignment="Center" />
-                        <TextBlock Text="Cerca" FontSize="14" Margin="9,0,6,0" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <Border x:Name="PinnedDivider" Style="{StaticResource Divider}" />
-                <ItemsControl x:Name="Pinned" ItemTemplate="{StaticResource AppButton}" ItemsPanel="{StaticResource Row}"
-                              VerticalAlignment="Center" />
-
-                <Border x:Name="SuggestedDivider" Style="{StaticResource Divider}" />
-                <ItemsControl x:Name="Suggested" ItemTemplate="{StaticResource AppButton}" ItemsPanel="{StaticResource Row}"
-                              VerticalAlignment="Center" ToolTip="Suggerite in base alle tue abitudini" />
-
-                <!-- In riproduzione (solo quando un'app sta suonando) -->
-                <StackPanel x:Name="MusicPanel" Orientation="Horizontal" Visibility="Collapsed">
-                    <Border Style="{StaticResource Divider}" />
-                    <Border Background="#0FFFFFFF" CornerRadius="10" Padding="4" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <Button Style="{StaticResource Flat}" Padding="0,0,8,0" Click="OnOpenDashboard" ToolTip="Apri la dashboard">
-                                <StackPanel Orientation="Horizontal">
-                                    <Border x:Name="MusicCover" Width="30" Height="30" CornerRadius="6">
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                <GradientStop Color="#F97359" Offset="0" />
-                                                <GradientStop Color="#7340D9" Offset="1" />
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                    </Border>
-                                    <StackPanel Margin="8,0,0,0" VerticalAlignment="Center" MaxWidth="150">
-                                        <TextBlock x:Name="MusicTitle" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock x:Name="MusicArtist" FontSize="10.5" Foreground="{StaticResource Muted}"
-                                                   TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource Flat}" Width="30" Height="30" Click="OnMusicPlayPause" ToolTip="Riproduci / pausa">
-                                <TextBlock x:Name="MusicPlayGlyph" Text="&#xE769;" FontFamily="{StaticResource Glyphs}" FontSize="12" />
-                            </Button>
-                            <Button x:Name="MusicNext" Style="{StaticResource Flat}" Width="30" Height="30" Click="OnMusicNext"
-                                    ToolTip="Successivo">
-                                <TextBlock Text="&#xE893;" FontFamily="{StaticResource Glyphs}" FontSize="12" />
-                            </Button>
-                        </StackPanel>
-                    </Border>
+            <Grid>
+                <!-- Versione compatta a riposo: si espande al passaggio del mouse -->
+                <StackPanel x:Name="Pill" Orientation="Horizontal" Visibility="Collapsed" Background="Transparent"
+                            Cursor="SizeAll" MouseLeftButtonDown="OnDragHandle">
+                    <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="15" Margin="9"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border x:Name="PillCover" Width="24" Height="24" CornerRadius="6" Margin="0,0,7,0"
+                            Background="{StaticResource CoverPlaceholder}" Visibility="Collapsed" />
                 </StackPanel>
 
-                <Border Style="{StaticResource Divider}" />
-                <Button Style="{StaticResource Flat}" Width="42" Height="40" Click="OnOpenDisplays"
-                        ToolTip="Schermi: luminosità, HDR, frequenza">
-                    <TextBlock Text="&#xE706;" FontFamily="{StaticResource Glyphs}" FontSize="16" />
-                </Button>
-                <Button x:Name="TaskbarButton" Style="{StaticResource Flat}" Width="42" Height="40" Click="OnToggleTaskbar">
-                    <TextBlock x:Name="TaskbarGlyph" Text="&#xE90E;" FontFamily="{StaticResource Glyphs}" FontSize="16" />
-                </Button>
-                <Button Style="{StaticResource Flat}" Width="42" Height="40" Click="OnOpenDashboard" ToolTip="Apri la dashboard completa">
-                    <TextBlock Text="&#xE70D;" FontFamily="{StaticResource Glyphs}" FontSize="13" />
-                </Button>
-            </StackPanel>
+                <StackPanel x:Name="Full" Orientation="Horizontal">
+                    <!-- Maniglia per spostare la barra -->
+                    <TextBlock x:Name="Handle" Text="&#xE76F;" FontFamily="{StaticResource Glyphs}" FontSize="14"
+                               Foreground="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextAlignment="Center" Padding="8,12" Cursor="SizeAll" Background="Transparent"
+                               ToolTip="Trascina per spostare: vicino a un bordo la barra si aggancia" MouseLeftButtonDown="OnDragHandle" />
+
+                    <Button Style="{StaticResource Flat}" Height="40" Padding="12,0" Click="OnOpenDashboard" ToolTip="Apri la dashboard">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource Glyphs}" FontSize="15" VerticalAlignment="Center" />
+                            <TextBlock x:Name="SearchText" Text="Cerca" FontSize="14" Margin="9,0,6,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Border x:Name="PinnedDivider" Style="{StaticResource Divider}" />
+                    <ItemsControl x:Name="Pinned" ItemTemplate="{StaticResource AppButton}" ItemsPanel="{StaticResource Row}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                    <Border x:Name="SuggestedDivider" Style="{StaticResource Divider}" />
+                    <ItemsControl x:Name="Suggested" ItemTemplate="{StaticResource AppButton}" ItemsPanel="{StaticResource Row}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Suggerite in base alle tue abitudini" />
+
+                    <!-- In riproduzione (solo quando un'app sta suonando) -->
+                    <StackPanel x:Name="MusicPanel" Orientation="Horizontal" Visibility="Collapsed">
+                        <Border x:Name="MusicDivider" Style="{StaticResource Divider}" />
+                        <Border Background="#0FFFFFFF" CornerRadius="10" Padding="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel x:Name="MusicRow" Orientation="Horizontal">
+                                <Button x:Name="MusicInfoButton" Style="{StaticResource Flat}" Padding="0,0,8,0" Click="OnOpenDashboard"
+                                        ToolTip="Apri la dashboard">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border x:Name="MusicCover" Width="30" Height="30" CornerRadius="6"
+                                                Background="{StaticResource CoverPlaceholder}" />
+                                        <StackPanel x:Name="MusicText" Margin="8,0,0,0" VerticalAlignment="Center" MaxWidth="150">
+                                            <TextBlock x:Name="MusicTitle" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock x:Name="MusicArtist" FontSize="10.5" Foreground="{StaticResource Muted}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource Flat}" Width="30" Height="30" Click="OnMusicPlayPause" ToolTip="Riproduci / pausa">
+                                    <TextBlock x:Name="MusicPlayGlyph" Text="&#xE769;" FontFamily="{StaticResource Glyphs}" FontSize="12" />
+                                </Button>
+                                <Button x:Name="MusicNext" Style="{StaticResource Flat}" Width="30" Height="30" Click="OnMusicNext"
+                                        ToolTip="Successivo">
+                                    <TextBlock Text="&#xE893;" FontFamily="{StaticResource Glyphs}" FontSize="12" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Border x:Name="ToolsDivider" Style="{StaticResource Divider}" />
+                    <Button Style="{StaticResource Flat}" Width="42" Height="40" Click="OnOpenDisplays"
+                            ToolTip="Schermi: luminosità, HDR, frequenza">
+                        <TextBlock Text="&#xE706;" FontFamily="{StaticResource Glyphs}" FontSize="16" />
+                    </Button>
+                    <Button x:Name="TaskbarButton" Style="{StaticResource Flat}" Width="42" Height="40" Click="OnToggleTaskbar">
+                        <TextBlock x:Name="TaskbarGlyph" Text="&#xE90E;" FontFamily="{StaticResource Glyphs}" FontSize="16" />
+                    </Button>
+                    <Button Style="{StaticResource Flat}" Width="42" Height="40" Click="OnOpenDashboard" ToolTip="Apri la dashboard completa">
+                        <TextBlock x:Name="OpenGlyph" Text="&#xE70D;" FontFamily="{StaticResource Glyphs}" FontSize="13" />
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>
