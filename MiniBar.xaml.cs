@@ -204,7 +204,31 @@ public partial class MiniBar : Window
             Settings.Current.Save();
             expanded = false;
             ApplyLayout();
+            AnimateChange();
         }
+    }
+
+    /// <summary>Pulsante sulla barra: passa da compatta a estesa e viceversa.</summary>
+    void OnToggleCompact(object sender, RoutedEventArgs e)
+    {
+        // il mouse è ancora sopra: senza questo la pillola si riaprirebbe subito
+        holdCollapsed = !Compact;
+        Compact = !Compact;
+    }
+
+    /// <summary>True dopo aver scelto "compatta" dalla barra, finché il mouse non esce.</summary>
+    bool holdCollapsed;
+
+    /// <summary>Animazione leggera al cambio di forma: il contenuto entra con dissolvenza e un piccolo zoom.</summary>
+    void AnimateChange()
+    {
+        if (!IsVisible) return;
+        var duration = TimeSpan.FromMilliseconds(180);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var grow = new DoubleAnimation(0.92, 1, duration) { EasingFunction = ease };
+        ContentScale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        ContentScale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+        Body.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
     }
 
     /// <summary>Verticale sui bordi laterali, orizzontale altrove; pillola se compatta e a riposo.</summary>
@@ -229,6 +253,10 @@ public partial class MiniBar : Window
         Handle.Text = vertical ? "" : "";
         Handle.Padding = vertical ? new Thickness(12, 8, 12, 8) : new Thickness(8, 12, 8, 12);
         // la freccia indica dove si aprirà la dashboard
+        CompactGlyph.Text = Compact ? "" : "";
+        CompactButton.ToolTip = Compact
+            ? "Mini barra sempre estesa"
+            : "Mini barra compatta: una pillola che si espande al passaggio del mouse";
         OpenGlyph.Text = Edge switch
         {
             BarEdge.Bottom => "",
@@ -243,6 +271,7 @@ public partial class MiniBar : Window
         if (expanded == value) return;
         expanded = value;
         ApplyLayout();
+        AnimateChange();
     }
 
     /// <summary>App fissate (shortcut) + suggerite che non sono già tra le fissate.</summary>
@@ -270,7 +299,7 @@ public partial class MiniBar : Window
         Fade(1);
         UpdateTaskbarButton();
         collapseTimer.Stop();
-        if (Compact && !expanded) expandTimer.Start(); // piccolo ritardo: passandoci sopra per caso non si apre
+        if (Compact && !expanded && !holdCollapsed) expandTimer.Start(); // piccolo ritardo: passandoci sopra per caso non si apre
         if (DateTime.Now - lastRefresh > TimeSpan.FromSeconds(30)) _ = RefreshAppsAsync();
     }
 
@@ -278,6 +307,7 @@ public partial class MiniBar : Window
     {
         Fade(IdleOpacity);
         expandTimer.Stop();
+        holdCollapsed = false;
         if (expanded) collapseTimer.Start();
     }
 

@@ -43,7 +43,10 @@
             </Border.Effect>
         </Border>
         <Border CornerRadius="16" Background="#E6141418" BorderBrush="#30FFFFFF" BorderThickness="1" Padding="6">
-            <Grid>
+            <Grid x:Name="Body" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="ContentScale" />
+                </Grid.RenderTransform>
                 <!-- Versione compatta a riposo: si espande al passaggio del mouse -->
                 <StackPanel x:Name="Pill" Orientation="Horizontal" Visibility="Collapsed" Background="Transparent"
                             Cursor="SizeAll" MouseLeftButtonDown="OnDragHandle">
@@ -113,6 +116,10 @@
                     </Button>
                     <Button Style="{StaticResource Flat}" Width="42" Height="40" Click="OnOpenDashboard" ToolTip="Apri la dashboard completa">
                         <TextBlock x:Name="OpenGlyph" Text="&#xE70D;" FontFamily="{StaticResource Glyphs}" FontSize="13" />
+                    </Button>
+                    <!-- Compatta / estesa -->
+                    <Button x:Name="CompactButton" Style="{StaticResource Flat}" Width="42" Height="40" Click="OnToggleCompact">
+                        <TextBlock x:Name="CompactGlyph" Text="&#xE73F;" FontFamily="{StaticResource Glyphs}" FontSize="14" />
                     </Button>
                 </StackPanel>
             </Grid>
